@@ -5,7 +5,21 @@
    ================================================================ */
 
 import React from 'react';
-import type { SensorData } from './InteractiveMotorTwin';
+
+export interface SensorData {
+  id: string;
+  name: string;
+  location: string;
+  value: number;
+  unit: string;
+  status: string;
+  normalRange: string;
+  warningRange: string;
+  criticalRange: string;
+  standard: string;
+  description: string;
+  icon: string;
+}
 
 interface Props {
   sensor: SensorData | null;

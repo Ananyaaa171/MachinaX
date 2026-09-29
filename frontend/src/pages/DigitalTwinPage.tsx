@@ -238,12 +238,15 @@ export default function DigitalTwinPage() {
       </div>
 
       {/* ================================================================
-          SECTION 1: THE INTERACTIVE DIGITAL TWIN VISUALIZER (SVG + CSS)
+          SECTION 1: THE INTERACTIVE DIGITAL TWIN VISUALIZER (CANVAS + PROTOTYPE)
           ================================================================ */}
       <section className="section" style={{ marginBottom: 20 }}>
         <InteractiveMotorTwin
           twin={twin}
           machineStatus={machine?.status}
+          machineName={machine?.name}
+          machineSerialNumber={machine?.serialNumber}
+          machineId={machineId}
           onRefresh={fetchData}
         />
       </section>

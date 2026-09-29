@@ -5,7 +5,7 @@
    and integrated Generate Report suite.
    ================================================================ */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFleet, type MachineTwinData } from '../context/FleetContext';
 export type { MachineTwinData };
@@ -18,6 +18,7 @@ import PredictiveMaintenanceSection from '../components/dashboard/PredictiveMain
 import RecentEventsTimeline from '../components/dashboard/RecentEventsTimeline';
 import GenerateReportModal from '../components/report/GenerateReportModal';
 import RecentReportsSection from '../components/report/RecentReportsSection';
+import LiveEquipmentTwin from '../components/twin/LiveEquipmentTwin';
 
 export default function FleetDashboard() {
   const navigate = useNavigate();
@@ -51,6 +52,17 @@ export default function FleetDashboard() {
   }
 
   const isZero = metrics.totalMachines === 0;
+
+  // Identify critical or monitored machine for Home page Live Twin Preview (Requirement 14)
+  const monitoredItem = useMemo(() => {
+    if (twinData.length === 0) return null;
+    const critical = twinData.find((t) => t.twin?.operatingState === 'CRITICAL');
+    if (critical) return critical;
+    const warning = twinData.find((t) => t.twin?.operatingState === 'WARNING' || t.twin?.operatingState === 'WATCH');
+    if (warning) return warning;
+    const lowest = [...twinData].sort((a, b) => (a.twin?.healthScore ?? 100) - (b.twin?.healthScore ?? 100))[0];
+    return lowest || twinData[0];
+  }, [twinData]);
 
   return (
     <>
@@ -168,6 +180,22 @@ export default function FleetDashboard() {
 
       {/* Section A: Role-Aware Fleet Summary KPI Strip */}
       <FleetSummaryCards metrics={metrics} currentUser={currentUser} loading={loading} />
+
+      {/* Section A.2: Live Digital Twin Equipment Preview (Requirement 14) */}
+      {!isZero && monitoredItem && (
+        <section className="section" id="section-twin-preview" style={{ marginBottom: 20 }}>
+          <LiveEquipmentTwin
+            machineId={monitoredItem.machine.id}
+            machineName={monitoredItem.machine.name}
+            machineSerialNumber={monitoredItem.machine.serialNumber}
+            machineStatus={monitoredItem.machine.status}
+            twin={monitoredItem.twin}
+            variant="compact"
+            onViewFullTwin={() => navigate(`/machines/${monitoredItem.machine.id}`)}
+            pollingIntervalSeconds={2}
+          />
+        </section>
+      )}
 
       {/* Section B: Fleet Health Overview */}
       <section className="section" id="section-fleet-health">
