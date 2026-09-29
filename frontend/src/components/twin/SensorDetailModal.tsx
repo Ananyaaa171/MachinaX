@@ -35,42 +35,19 @@ export default function SensorDetailModal({ sensor, onClose }: Props) {
   return (
     <div
       className="modal-backdrop"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1100,
-      }}
       onClick={onClose}
     >
       <div
         className="modal-card"
         style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-medium)',
-          borderRadius: 'var(--radius-lg)',
-          width: '460px',
-          maxWidth: '92vw',
-          boxShadow: 'var(--shadow-elevated)',
-          overflow: 'hidden',
+          width: '480px',
+          maxWidth: '94vw',
+          maxHeight: 'min(90vh, 680px)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div
-          style={{
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--border-subtle)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'rgba(255, 255, 255, 0.02)',
-          }}
-        >
+        <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: '1.4rem' }}>{sensor.icon}</span>
             <div>
@@ -92,7 +69,7 @@ export default function SensorDetailModal({ sensor, onClose }: Props) {
         </div>
 
         {/* Content */}
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="modal-body" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Main Reading Display */}
           <div
             style={{

@@ -339,37 +339,23 @@ export default function MaintenancePage() {
       {showCreateModal && (
         <div
           className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
           onClick={() => setShowCreateModal(false)}
         >
           <div
             className="modal-card"
             style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-medium)',
-              borderRadius: 'var(--radius-lg)',
-              width: '460px',
-              maxWidth: '92vw',
-              boxShadow: 'var(--shadow-elevated)',
-              overflow: 'hidden',
+              width: '480px',
+              maxWidth: '94vw',
+              maxHeight: 'min(90vh, 650px)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="modal-header">
               <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>+ Dispatch New Work Order</div>
               <button className="btn btn--secondary" onClick={() => setShowCreateModal(false)} style={{ padding: '2px 8px' }}>✕</button>
             </div>
 
-            <form onSubmit={handleCreateOrder} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleCreateOrder} className="modal-body" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Target Asset</label>
                 <select

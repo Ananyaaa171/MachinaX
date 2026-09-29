@@ -95,7 +95,7 @@ export default function FleetHealthSection({ twinData }: Props) {
           className="health-overview__percentage"
           style={{ color: healthColor(avgHealth) }}
         >
-          {avgHealth !== null ? avgHealth.toFixed(1) + '%' : '—'}
+          {avgHealth !== null ? avgHealth.toFixed(1) + '%' : 'N/A'}
         </div>
         <div className="health-overview__label">Overall Fleet Health</div>
 
@@ -167,7 +167,14 @@ export default function FleetHealthSection({ twinData }: Props) {
             ⚠ Simulated trend — live history not yet available
           </span>
         </div>
-        {trendData.length < 2 ? (
+        {avgHealth === null ? (
+          <div className="empty-state" style={{ padding: '40px 16px', textAlign: 'center' }}>
+            <div className="empty-state__icon">📉</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              No machine telemetry available to calculate trend.
+            </div>
+          </div>
+        ) : trendData.length < 2 ? (
           <div className="empty-state">
             <div className="empty-state__icon">📉</div>
             Loading trend data…

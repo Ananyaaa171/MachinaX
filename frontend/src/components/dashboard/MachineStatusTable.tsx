@@ -1,17 +1,17 @@
 /* ================================================================
    MachineStatusTable.tsx — Professional machine status data table.
-   Phase 9: Columns: Machine, Status, Health, Temp, Vibration,
-   Load, Anomaly, Risk, Last Maintenance, Action.
+   Phase 10.1: Columns: Machine, State, Health, Temperature,
+   Vibration, RPM, Load, Risk, Fault, Action (View Twin).
    Derives all values from real API data where available.
    ================================================================ */
 
-import { useState } from 'react';
-import type { MachineTwinData } from '../../pages/FleetDashboard';
-import { formatDateTime } from '../../utils/format';
+import React, { useState } from 'react';
+import type { MachineTwinData } from '../../context/FleetContext';
 
 interface Props {
   twinData: MachineTwinData[];
   onViewMachine: (machineId: number) => void;
+  onLoadDemoFleet?: () => void;
 }
 
 type FilterType = 'all' | 'healthy' | 'warning' | 'critical';
@@ -45,12 +45,10 @@ function getHealthColor(score: number | null | undefined): string {
   return 'var(--color-critical)';
 }
 
-function getRisk(score: number | null | undefined, anomaly: boolean | null): string {
-  if (anomaly) return 'high';
-  if (score === null || score === undefined) return 'medium';
-  if (score >= 80) return 'low';
-  if (score >= 60) return 'medium';
-  return 'high';
+function getRisk(score: number | null | undefined, anomaly: boolean | null, opState: string | null | undefined): string {
+  if (opState === 'CRITICAL' || anomaly || (score !== null && score !== undefined && score < 60)) return 'high';
+  if (opState === 'WARNING' || opState === 'WATCH' || (score !== null && score !== undefined && score < 80)) return 'medium';
+  return 'low';
 }
 
 function getSensorValue(
@@ -68,9 +66,8 @@ function getSensorValue(
   return { value: sensor.value, unit: sensor.unit };
 }
 
-export default function MachineStatusTable({ twinData, onViewMachine }: Props) {
+export default function MachineStatusTable({ twinData, onViewMachine, onLoadDemoFleet }: Props) {
   const [filter, setFilter] = useState<FilterType>('all');
-  const [confirming, setConfirming] = useState<number | null>(null);
 
   const filtered = twinData.filter((d) => {
     if (filter === 'all') return true;
@@ -81,17 +78,21 @@ export default function MachineStatusTable({ twinData, onViewMachine }: Props) {
     return true;
   });
 
-  const handleView = (id: number) => {
-    onViewMachine(id);
-  };
-
   if (!twinData.length) {
     return (
-      <div className="machine-table-card">
-        <div className="empty-state" style={{ padding: 40 }}>
-          <div className="empty-state__icon">⚙</div>
-          <div>No machines found. Check backend connection.</div>
+      <div className="machine-table-card" style={{ padding: '36px 20px', textAlign: 'center' }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>⚙</div>
+        <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>
+          NO MACHINES REGISTERED
         </div>
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: 440, margin: '0 auto 16px' }}>
+          No machine data is currently available in the system.
+        </div>
+        {onLoadDemoFleet && (
+          <button className="btn btn--primary" onClick={onLoadDemoFleet} style={{ padding: '8px 16px', fontSize: '0.8rem' }}>
+            + Load Demonstration Fleet
+          </button>
+        )}
       </div>
     );
   }
@@ -120,50 +121,76 @@ export default function MachineStatusTable({ twinData, onViewMachine }: Props) {
           <thead>
             <tr>
               <th>Machine</th>
-              <th>Status</th>
+              <th>Type</th>
+              <th>State</th>
               <th>Health</th>
               <th>Temperature</th>
               <th>Vibration</th>
+              <th>RPM</th>
               <th>Load</th>
-              <th>Anomaly</th>
               <th>Risk</th>
-              <th>Last Maintenance</th>
+              <th>Fault</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map(({ machine, twin }) => {
-              const statusClass = getStatusClass(twin?.operatingState);
-              const statusLabel = getStatusLabel(twin?.operatingState, machine.status);
+            {filtered.map(({ machine, twin, ml }) => {
+              const opState = twin?.operatingState;
+              const statusClass = getStatusClass(opState);
+              const statusLabel = getStatusLabel(opState, machine.status);
               const health = twin?.healthScore ?? null;
               const healthColor = getHealthColor(health);
-              const risk = getRisk(health, twin?.anomalyDetected ?? null);
-              const anomaly = twin?.anomalyDetected;
+              const risk = getRisk(health, twin?.anomalyDetected ?? null, opState);
 
               // Extract sensor values
-              const temp = getSensorValue(twin, ['temperature', 'temp', 'thermal']);
-              const vibration = getSensorValue(twin, ['vibration', 'vibr', 'vib', 'acceleration']);
-              const load = getSensorValue(twin, ['load', 'current', 'power', 'torque']);
+              const temp = getSensorValue(twin, ['temperature', 'temp', 'thermal', 'winding']);
+              const vibration = getSensorValue(twin, ['vibration', 'vibr', 'vib']);
+              const current = getSensorValue(twin, ['current', 'curr', 'amp']);
+              const rpm = getSensorValue(twin, ['rpm', 'speed', 'rotor']);
+
+              // Calculate Load percentage
+              const ratedA = machine.ratedCurrentA || 28;
+              const loadVal = current.value !== null
+                ? Math.min(100, Math.round((current.value / ratedA) * 100))
+                : null;
+
+              // Fault type display
+              const faultLabel =
+                twin?.currentFaultType && twin.currentFaultType !== 'NONE'
+                  ? twin.currentFaultType.replace(/_/g, ' ')
+                  : ml?.faultType && ml.faultType !== 'NONE'
+                  ? ml.faultType.replace(/_/g, ' ')
+                  : 'NONE';
 
               return (
                 <tr
                   key={machine.id}
                   id={`machine-row-${machine.id}`}
-                  onClick={() => handleView(machine.id)}
-                  title={`View ${machine.name} details`}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => onViewMachine(machine.id)}
+                  title={`Click to view Digital Twin for ${machine.name}`}
                 >
-                  {/* Machine name */}
+                  {/* Machine name & ID */}
                   <td>
                     <div className="machine-name-cell">
                       <span className="machine-name-cell__name">{machine.name}</span>
-                      <span className="machine-name-cell__id">{machine.serialNumber}</span>
+                      <span className="machine-name-cell__id">
+                        {machine.serialNumber} • {machine.location}
+                      </span>
                     </div>
                   </td>
 
-                  {/* Status */}
+                  {/* Machine Type */}
+                  <td>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                      {machine.machineType?.name || '3-Phase Induction Motor'}
+                    </span>
+                  </td>
+
+                  {/* State */}
                   <td>
                     <span className={`status-badge status-badge--${statusClass}`}>
-                      {statusLabel}
+                      ● {statusLabel}
                     </span>
                   </td>
 
@@ -174,7 +201,7 @@ export default function MachineStatusTable({ twinData, onViewMachine }: Props) {
                         <div className="health-bar-cell__bar">
                           <div
                             className="health-bar-cell__fill"
-                            style={{ width: `${health}%`, background: healthColor }}
+                            style={{ width: `${Math.min(100, health)}%`, background: healthColor }}
                           />
                         </div>
                         <span className="health-bar-cell__text" style={{ color: healthColor }}>
@@ -204,27 +231,22 @@ export default function MachineStatusTable({ twinData, onViewMachine }: Props) {
                     </span>
                   </td>
 
-                  {/* Load / Current */}
+                  {/* RPM */}
                   <td>
                     <span className="sensor-val" style={{ color: 'var(--text-primary)' }}>
-                      {load.value !== null
-                        ? `${load.value.toFixed(1)} ${load.unit || 'A'}`
+                      {rpm.value !== null
+                        ? `${Math.round(rpm.value)} RPM`
                         : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </span>
                   </td>
 
-                  {/* Anomaly */}
+                  {/* Load */}
                   <td>
-                    {anomaly !== null && anomaly !== undefined ? (
-                      <span
-                        className={`status-badge status-badge--${anomaly ? 'critical' : 'running'}`}
-                        style={{ fontSize: '0.62rem' }}
-                      >
-                        {anomaly ? '✕ Detected' : '✓ Normal'}
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>—</span>
-                    )}
+                    <span className="sensor-val" style={{ color: 'var(--text-primary)' }}>
+                      {loadVal !== null
+                        ? `${loadVal}%`
+                        : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                    </span>
                   </td>
 
                   {/* Risk */}
@@ -234,12 +256,16 @@ export default function MachineStatusTable({ twinData, onViewMachine }: Props) {
                     </span>
                   </td>
 
-                  {/* Last Maintenance */}
+                  {/* Fault */}
                   <td>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                      {machine.installationDate
-                        ? formatDateTime(machine.installationDate)
-                        : '—'}
+                    <span
+                      style={{
+                        fontSize: '0.74rem',
+                        fontWeight: faultLabel !== 'NONE' ? 700 : 500,
+                        color: faultLabel !== 'NONE' ? 'var(--color-critical)' : 'var(--text-muted)',
+                      }}
+                    >
+                      {faultLabel}
                     </span>
                   </td>
 
@@ -247,11 +273,21 @@ export default function MachineStatusTable({ twinData, onViewMachine }: Props) {
                   <td onClick={(e) => e.stopPropagation()}>
                     <button
                       className="table-action-btn"
-                      onClick={() => handleView(machine.id)}
-                      id={`btn-view-${machine.id}`}
-                      title={`View details for ${machine.name}`}
+                      onClick={() => onViewMachine(machine.id)}
+                      id={`btn-view-twin-${machine.id}`}
+                      style={{
+                        padding: '4px 10px',
+                        background: 'rgba(77, 157, 224, 0.12)',
+                        border: '1px solid rgba(77, 157, 224, 0.35)',
+                        color: 'var(--color-primary)',
+                        borderRadius: 4,
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
                     >
-                      View →
+                      View Twin →
                     </button>
                   </td>
                 </tr>
@@ -259,13 +295,6 @@ export default function MachineStatusTable({ twinData, onViewMachine }: Props) {
             })}
           </tbody>
         </table>
-
-        {filtered.length === 0 && (
-          <div className="empty-state" style={{ padding: 32 }}>
-            <div className="empty-state__icon">⊘</div>
-            No machines match the selected filter.
-          </div>
-        )}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { DemoUserProvider } from './context/DemoUserContext';
+import { FleetProvider } from './context/FleetContext';
 import AppShell from './components/layout/AppShell';
 import FleetDashboard from './pages/FleetDashboard';
 import MachinesPage from './pages/MachinesPage';
@@ -16,7 +17,8 @@ import AnalyticsPage from './pages/AnalyticsPage';
 export default function App() {
   return (
     <DemoUserProvider>
-      <AppShell>
+      <FleetProvider>
+        <AppShell>
         <Routes>
           {/* Page 1: Dashboard */}
           <Route path="/dashboard" element={<FleetDashboard />} />
@@ -44,6 +46,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AppShell>
-    </DemoUserProvider>
-  );
+    </FleetProvider>
+  </DemoUserProvider>
+);
 }

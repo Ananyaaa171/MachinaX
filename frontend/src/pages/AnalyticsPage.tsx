@@ -22,10 +22,13 @@ import {
 } from 'recharts';
 import { demoDataService } from '../services/demoDataService';
 import { useDemoUser } from '../context/DemoUserContext';
+import GenerateReportModal from '../components/report/GenerateReportModal';
+import RecentReportsSection from '../components/report/RecentReportsSection';
 
 export default function AnalyticsPage() {
   const { currentUser } = useDemoUser();
   const [analytics] = useState(() => demoDataService.getAnalyticsData());
+  const [reportModalOpen, setReportModalOpen] = useState(false);
 
   const RADIAN = Math.PI / 180;
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
@@ -93,6 +96,16 @@ export default function AnalyticsPage() {
           <div className="page-header__subtitle">
             Long-term fleet health trends, failure probability distributions, and sensor correlation analysis
           </div>
+        </div>
+        <div className="page-header__actions">
+          <button
+            className="btn btn--primary"
+            id="btn-analytics-generate-report"
+            onClick={() => setReportModalOpen(true)}
+            style={{ fontWeight: 700 }}
+          >
+            📊 Generate Report
+          </button>
         </div>
       </div>
 
@@ -264,6 +277,15 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* Recent Reports Section */}
+      <RecentReportsSection />
+
+      {/* Generate Report Modal */}
+      <GenerateReportModal
+        isOpen={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+      />
     </div>
   );
 }

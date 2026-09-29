@@ -56,9 +56,9 @@ function derivePredictions(twinData: MachineTwinData[]): PredictiveEntry[] {
       // Predicted fault
       let predictedFault = 'Normal Wear';
       if (ml?.faultType && ml.faultType !== 'NONE') {
-        predictedFault = ml.faultType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        predictedFault = ml.faultType.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
       } else if (twin?.currentFaultType && twin.currentFaultType !== 'NONE') {
-        predictedFault = twin.currentFaultType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        predictedFault = twin.currentFaultType.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
       } else if (twin?.anomalyDetected) {
         predictedFault = 'Unclassified Anomaly';
       } else {

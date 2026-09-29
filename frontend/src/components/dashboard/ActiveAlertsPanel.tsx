@@ -68,7 +68,7 @@ function generateAlerts(twinData: MachineTwinData[]): Alert[] {
 
     // Warning state alerts from sensors
     if (twin.latestSensors) {
-      twin.latestSensors.forEach((sensor) => {
+      twin.latestSensors.forEach((sensor: any) => {
         if (sensor.status === 'CRITICAL') {
           alerts.push({
             id: `sensor-critical-${machine.id}-${sensor.sensorId}`,

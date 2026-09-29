@@ -1,8 +1,4 @@
-/* ================================================================
-   demoDataService.ts — Demonstration Data Layer
-   Phase 10: Clearly segregated simulated & demonstration records
-   for Alerts, Maintenance Work Orders, and Reliability Analytics.
-   ================================================================ */
+import type { MachineResponse, DigitalTwinStateResponse } from '../types';
 
 export interface DemoAlertItem {
   id: string;
@@ -291,5 +287,221 @@ export const demoDataService = {
         { name: 'High / Critical', value: 13, color: '#ef4444' },
       ],
     };
+  },
+
+  // Demonstration Fleet Single-Source-of-Truth Fallback (8 Machines: 5 Healthy, 2 Warning, 1 Critical)
+  getDemonstrationMachines(): MachineResponse[] {
+    return [
+      {
+        id: 1,
+        name: 'Motor IM-001',
+        serialNumber: 'IM-001',
+        location: 'Plant A - Bay 3',
+        machineType: { id: 1, name: 'THREE_PHASE_INDUCTION_MOTOR', manufacturer: 'ABB', category: 'Electric Motor' },
+        ratedPowerKw: 15.0,
+        ratedVoltageV: 415.0,
+        ratedCurrentA: 28.0,
+        ratedSpeedRpm: 2900.0,
+        installationDate: '2026-01-15',
+        status: 'ACTIVE',
+        createdAt: '2026-01-15T00:00:00Z',
+        updatedAt: '2026-01-15T00:00:00Z',
+      },
+      {
+        id: 20,
+        name: 'Motor IM-002',
+        serialNumber: 'IM-002',
+        location: 'Plant A - Bay 4',
+        machineType: { id: 1, name: 'THREE_PHASE_INDUCTION_MOTOR', manufacturer: 'Siemens', category: 'Electric Motor' },
+        ratedPowerKw: 15.0,
+        ratedVoltageV: 415.0,
+        ratedCurrentA: 28.0,
+        ratedSpeedRpm: 2900.0,
+        installationDate: '2026-01-20',
+        status: 'ACTIVE',
+        createdAt: '2026-01-20T00:00:00Z',
+        updatedAt: '2026-01-20T00:00:00Z',
+      },
+      {
+        id: 21,
+        name: 'Motor IM-003',
+        serialNumber: 'IM-003',
+        location: 'Plant B - Line 1',
+        machineType: { id: 1, name: 'THREE_PHASE_INDUCTION_MOTOR', manufacturer: 'WEG', category: 'Electric Motor' },
+        ratedPowerKw: 22.0,
+        ratedVoltageV: 415.0,
+        ratedCurrentA: 40.0,
+        ratedSpeedRpm: 2950.0,
+        installationDate: '2025-11-10',
+        status: 'ACTIVE',
+        createdAt: '2025-11-10T00:00:00Z',
+        updatedAt: '2025-11-10T00:00:00Z',
+      },
+      {
+        id: 22,
+        name: 'Motor IM-004',
+        serialNumber: 'IM-004',
+        location: 'Plant B - Line 2',
+        machineType: { id: 1, name: 'THREE_PHASE_INDUCTION_MOTOR', manufacturer: 'ABB', category: 'Electric Motor' },
+        ratedPowerKw: 22.0,
+        ratedVoltageV: 415.0,
+        ratedCurrentA: 40.0,
+        ratedSpeedRpm: 2950.0,
+        installationDate: '2025-11-12',
+        status: 'ACTIVE',
+        createdAt: '2025-11-12T00:00:00Z',
+        updatedAt: '2025-11-12T00:00:00Z',
+      },
+      {
+        id: 23,
+        name: 'Motor IM-005',
+        serialNumber: 'IM-005',
+        location: 'Plant C - Compressor 1',
+        machineType: { id: 1, name: 'THREE_PHASE_INDUCTION_MOTOR', manufacturer: 'Schneider', category: 'Electric Motor' },
+        ratedPowerKw: 30.0,
+        ratedVoltageV: 415.0,
+        ratedCurrentA: 54.0,
+        ratedSpeedRpm: 1480.0,
+        installationDate: '2025-08-05',
+        status: 'ACTIVE',
+        createdAt: '2025-08-05T00:00:00Z',
+        updatedAt: '2025-08-05T00:00:00Z',
+      },
+      {
+        id: 24,
+        name: 'Motor IM-006',
+        serialNumber: 'IM-006',
+        location: 'Plant C - Compressor 2',
+        machineType: { id: 1, name: 'THREE_PHASE_INDUCTION_MOTOR', manufacturer: 'Siemens', category: 'Electric Motor' },
+        ratedPowerKw: 30.0,
+        ratedVoltageV: 415.0,
+        ratedCurrentA: 54.0,
+        ratedSpeedRpm: 1480.0,
+        installationDate: '2025-08-08',
+        status: 'ACTIVE',
+        createdAt: '2025-08-08T00:00:00Z',
+        updatedAt: '2025-08-08T00:00:00Z',
+      },
+      {
+        id: 25,
+        name: 'Motor IM-007',
+        serialNumber: 'IM-007',
+        location: 'Plant D - Pump Station',
+        machineType: { id: 1, name: 'THREE_PHASE_INDUCTION_MOTOR', manufacturer: 'WEG', category: 'Electric Motor' },
+        ratedPowerKw: 11.0,
+        ratedVoltageV: 415.0,
+        ratedCurrentA: 21.0,
+        ratedSpeedRpm: 1450.0,
+        installationDate: '2026-02-01',
+        status: 'ACTIVE',
+        createdAt: '2026-02-01T00:00:00Z',
+        updatedAt: '2026-02-01T00:00:00Z',
+      },
+      {
+        id: 26,
+        name: 'Motor IM-008',
+        serialNumber: 'IM-008',
+        location: 'Plant D - Auxiliary Feed',
+        machineType: { id: 1, name: 'THREE_PHASE_INDUCTION_MOTOR', manufacturer: 'ABB', category: 'Electric Motor' },
+        ratedPowerKw: 7.5,
+        ratedVoltageV: 415.0,
+        ratedCurrentA: 15.0,
+        ratedSpeedRpm: 1450.0,
+        installationDate: '2026-02-15',
+        status: 'ACTIVE',
+        createdAt: '2026-02-15T00:00:00Z',
+        updatedAt: '2026-02-15T00:00:00Z',
+      },
+    ];
+  },
+
+  getDemonstrationTwinState(machineId: number): DigitalTwinStateResponse {
+    const defaultState: DigitalTwinStateResponse = {
+      machineId,
+      machineName: `Motor IM-00${machineId}`,
+      serialNumber: `IM-00${machineId}`,
+      healthScore: 95.0,
+      operatingState: 'NORMAL',
+      anomalyDetected: false,
+      anomalyScore: 0.04,
+      currentFaultType: 'NONE',
+      faultProbability: 0.03,
+      latestSensors: [
+        { sensorId: 1, sensorLabel: 'Drive-End Bearing Vibration', sensorType: 'VIBRATION', value: 1.2, unit: 'mm/s', status: 'NORMAL', normalMin: 0.5, normalMax: 2.8, warningMin: 2.8, warningMax: 4.5, criticalMin: 4.5, criticalMax: 8.0, recordedAt: new Date().toISOString() },
+        { sensorId: 2, sensorLabel: 'Stator Phase Current RMS', sensorType: 'CURRENT', value: 24.5, unit: 'A', status: 'NORMAL', normalMin: 10, normalMax: 45, warningMin: 45, warningMax: 60, criticalMin: 60, criticalMax: 90, recordedAt: new Date().toISOString() },
+        { sensorId: 3, sensorLabel: 'Winding Temperature', sensorType: 'TEMPERATURE', value: 52.0, unit: '°C', status: 'NORMAL', normalMin: 40, normalMax: 75, warningMin: 75, warningMax: 90, criticalMin: 90, criticalMax: 120, recordedAt: new Date().toISOString() },
+        { sensorId: 4, sensorLabel: 'Rotor Speed', sensorType: 'RPM', value: 2920.0, unit: 'rpm', status: 'NORMAL', normalMin: 1400, normalMax: 3000, warningMin: 1200, warningMax: 1400, criticalMin: 1000, criticalMax: 1200, recordedAt: new Date().toISOString() },
+      ],
+      lastSensorBatchAt: new Date().toISOString(),
+      lastUpdatedAt: new Date().toISOString(),
+      rul: { estimatedHours: 2400.0, confidence: 'HIGH', degradationTrend: 'STABLE' },
+      maintenance: { priority: 'P4_LOW', recommendation: 'Routine continuous monitoring. Baseline normal.' },
+      explanation: null,
+    };
+
+    if (machineId === 20) {
+      // IM-002: Warning — Bearing Degradation
+      return {
+        ...defaultState,
+        healthScore: 76.0,
+        operatingState: 'WARNING',
+        anomalyDetected: true,
+        anomalyScore: 0.24,
+        currentFaultType: 'BEARING_DEFECT',
+        faultProbability: 0.82,
+        latestSensors: [
+          { sensorId: 24, sensorLabel: 'Drive-End Bearing Vibration', sensorType: 'VIBRATION', value: 4.90, unit: 'mm/s', status: 'WARNING', normalMin: 0.5, normalMax: 2.8, warningMin: 2.8, warningMax: 4.5, criticalMin: 4.5, criticalMax: 8.0, recordedAt: new Date().toISOString() },
+          { sensorId: 31, sensorLabel: 'Stator Phase Current RMS', sensorType: 'CURRENT', value: 32.0, unit: 'A', status: 'NORMAL', normalMin: 10, normalMax: 45, warningMin: 45, warningMax: 60, criticalMin: 60, criticalMax: 90, recordedAt: new Date().toISOString() },
+          { sensorId: 38, sensorLabel: 'Winding Temperature', sensorType: 'TEMPERATURE', value: 72.0, unit: '°C', status: 'NORMAL', normalMin: 40, normalMax: 75, warningMin: 75, warningMax: 90, criticalMin: 90, criticalMax: 120, recordedAt: new Date().toISOString() },
+          { sensorId: 45, sensorLabel: 'Rotor Speed', sensorType: 'RPM', value: 2880.0, unit: 'rpm', status: 'NORMAL', normalMin: 1400, normalMax: 3000, warningMin: 1200, warningMax: 1400, criticalMin: 1000, criticalMax: 1200, recordedAt: new Date().toISOString() },
+        ],
+        rul: { estimatedHours: 312.0, confidence: 'MEDIUM', degradationTrend: 'DEGRADING' },
+        maintenance: { priority: 'P2_MEDIUM', recommendation: 'Bearing lubrication & vibration re-alignment scheduled within 72h.' },
+      };
+    }
+
+    if (machineId === 21) {
+      // IM-003: Critical — Stator Short / Overheating
+      return {
+        ...defaultState,
+        healthScore: 42.0,
+        operatingState: 'CRITICAL',
+        anomalyDetected: true,
+        anomalyScore: 0.58,
+        currentFaultType: 'STATOR_SHORT',
+        faultProbability: 0.94,
+        latestSensors: [
+          { sensorId: 25, sensorLabel: 'Drive-End Bearing Vibration', sensorType: 'VIBRATION', value: 7.20, unit: 'mm/s', status: 'CRITICAL', normalMin: 0.5, normalMax: 2.8, warningMin: 2.8, warningMax: 4.5, criticalMin: 4.5, criticalMax: 8.0, recordedAt: new Date().toISOString() },
+          { sensorId: 32, sensorLabel: 'Stator Phase Current RMS', sensorType: 'CURRENT', value: 43.0, unit: 'A', status: 'NORMAL', normalMin: 10, normalMax: 45, warningMin: 45, warningMax: 60, criticalMin: 60, criticalMax: 90, recordedAt: new Date().toISOString() },
+          { sensorId: 39, sensorLabel: 'Winding Temperature', sensorType: 'TEMPERATURE', value: 98.0, unit: '°C', status: 'CRITICAL', normalMin: 40, normalMax: 75, warningMin: 75, warningMax: 90, criticalMin: 90, criticalMax: 120, recordedAt: new Date().toISOString() },
+          { sensorId: 46, sensorLabel: 'Rotor Speed', sensorType: 'RPM', value: 2620.0, unit: 'rpm', status: 'NORMAL', normalMin: 1400, normalMax: 3000, warningMin: 1200, warningMax: 1400, criticalMin: 1000, criticalMax: 1200, recordedAt: new Date().toISOString() },
+        ],
+        rul: { estimatedHours: 48.0, confidence: 'HIGH', degradationTrend: 'DEGRADING' },
+        maintenance: { priority: 'P1_CRITICAL', recommendation: 'Urgent isolation: stator thermal overload inspection required immediately.' },
+      };
+    }
+
+    if (machineId === 24) {
+      // IM-006: Warning — Thermal Stress
+      return {
+        ...defaultState,
+        healthScore: 68.0,
+        operatingState: 'WARNING',
+        anomalyDetected: true,
+        anomalyScore: 0.32,
+        currentFaultType: 'UNCLASSIFIED',
+        faultProbability: 0.78,
+        latestSensors: [
+          { sensorId: 28, sensorLabel: 'Drive-End Bearing Vibration', sensorType: 'VIBRATION', value: 3.80, unit: 'mm/s', status: 'WARNING', normalMin: 0.5, normalMax: 2.8, warningMin: 2.8, warningMax: 4.5, criticalMin: 4.5, criticalMax: 8.0, recordedAt: new Date().toISOString() },
+          { sensorId: 35, sensorLabel: 'Stator Phase Current RMS', sensorType: 'CURRENT', value: 50.0, unit: 'A', status: 'WARNING', normalMin: 10, normalMax: 45, warningMin: 45, warningMax: 60, criticalMin: 60, criticalMax: 90, recordedAt: new Date().toISOString() },
+          { sensorId: 42, sensorLabel: 'Winding Temperature', sensorType: 'TEMPERATURE', value: 88.0, unit: '°C', status: 'WARNING', normalMin: 40, normalMax: 75, warningMin: 75, warningMax: 90, criticalMin: 90, criticalMax: 120, recordedAt: new Date().toISOString() },
+          { sensorId: 49, sensorLabel: 'Rotor Speed', sensorType: 'RPM', value: 1465.0, unit: 'rpm', status: 'NORMAL', normalMin: 1400, normalMax: 3000, warningMin: 1200, warningMax: 1400, criticalMin: 1000, criticalMax: 1200, recordedAt: new Date().toISOString() },
+        ],
+        rul: { estimatedHours: 180.0, confidence: 'MEDIUM', degradationTrend: 'DEGRADING' },
+        maintenance: { priority: 'P2_MEDIUM', recommendation: 'Cooling duct cleanout and thermal load distribution inspection.' },
+      };
+    }
+
+    return defaultState;
   },
 };

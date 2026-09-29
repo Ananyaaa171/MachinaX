@@ -607,41 +607,18 @@ export default function AppShell({ children }: Props) {
       {showUserModal && (
         <div
           className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1100,
-          }}
           onClick={() => setShowUserModal(false)}
         >
           <div
             className="modal-card"
             style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-medium)',
-              borderRadius: 'var(--radius-lg)',
               width: '560px',
-              maxWidth: '92vw',
-              boxShadow: 'var(--shadow-elevated)',
-              overflow: 'hidden',
+              maxWidth: '94vw',
+              maxHeight: 'min(88vh, 680px)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              style={{
-                padding: '16px 20px',
-                borderBottom: '1px solid var(--border-subtle)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: 'rgba(255, 255, 255, 0.02)',
-              }}
-            >
+            <div className="modal-header">
               <div>
                 <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   👤 Switch Demonstration User
@@ -659,7 +636,15 @@ export default function AppShell({ children }: Props) {
               </button>
             </div>
 
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div
+              className="modal-body"
+              style={{
+                padding: '16px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+              }}
+            >
               {users.map((u) => {
                 const isCurrent = u.id === currentUser.id;
                 return (
@@ -700,8 +685,8 @@ export default function AppShell({ children }: Props) {
                       {u.initials}
                     </div>
 
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
                         <div>
                           <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                             {u.name}
@@ -765,41 +750,18 @@ export default function AppShell({ children }: Props) {
       {showSimModal && (
         <div
           className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1100,
-          }}
           onClick={() => setShowSimModal(false)}
         >
           <div
             className="modal-card"
             style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-medium)',
-              borderRadius: 'var(--radius-lg)',
               width: '540px',
-              maxWidth: '92vw',
-              boxShadow: 'var(--shadow-elevated)',
-              overflow: 'hidden',
+              maxWidth: '94vw',
+              maxHeight: 'min(90vh, 700px)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              style={{
-                padding: '16px 20px',
-                borderBottom: '1px solid var(--border-subtle)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: 'rgba(255, 255, 255, 0.02)',
-              }}
-            >
+            <div className="modal-header">
               <div>
                 <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   ⚡ Sensor Simulator & Fault Injection
@@ -817,7 +779,10 @@ export default function AppShell({ children }: Props) {
               </button>
             </div>
 
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div
+              className="modal-body"
+              style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}
+            >
               <div
                 style={{
                   background: 'var(--bg-inset)',

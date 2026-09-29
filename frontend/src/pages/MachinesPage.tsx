@@ -1,74 +1,28 @@
 /* ================================================================
    MachinesPage.tsx — Dedicated Industrial Machine Fleet Inventory
-   Phase 10: Machine Fleet management, search, multi-state filtering,
+   Phase 10.1: Machine Fleet management, search, multi-state filtering,
    health indicators, sensor summaries, and direct digital twin links.
+   Uses the centralized FleetContext single source of truth.
    ================================================================ */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMachines, getDigitalTwin } from '../api/client';
-import type { MachineResponse, DigitalTwinStateResponse } from '../types';
+import { useFleet } from '../context/FleetContext';
 import { useDemoUser } from '../context/DemoUserContext';
-
-interface MachineItem {
-  machine: MachineResponse;
-  twin: DigitalTwinStateResponse | null;
-  loading: boolean;
-}
 
 type FilterState = 'ALL' | 'HEALTHY' | 'WARNING' | 'CRITICAL' | 'OFFLINE' | 'MAINTENANCE';
 
 export default function MachinesPage() {
   const navigate = useNavigate();
   const { currentUser } = useDemoUser();
+  const { twinData, loading, metrics, loadDemoFleet, refreshFleet } = useFleet();
 
-  const [machines, setMachines] = useState<MachineItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterState>('ALL');
 
-  useEffect(() => {
-    let mounted = true;
-    async function loadData() {
-      try {
-        const list = await getMachines();
-        if (!mounted) return;
-
-        // Initial items with loading twins
-        const initial = list.map((m) => ({ machine: m, twin: null, loading: true }));
-        setMachines(initial);
-        setLoading(false);
-
-        // Fetch digital twins in parallel
-        const twinResults = await Promise.allSettled(
-          list.map((m) => getDigitalTwin(m.id))
-        );
-
-        if (!mounted) return;
-        setMachines(
-          list.map((m, idx) => ({
-            machine: m,
-            twin: twinResults[idx].status === 'fulfilled' ? twinResults[idx].value : null,
-            loading: false,
-          }))
-        );
-      } catch (err) {
-        console.error('Failed to load machines:', err);
-        if (mounted) setLoading(false);
-      }
-    }
-
-    loadData();
-    const timer = setInterval(loadData, 10000);
-    return () => {
-      mounted = false;
-      clearInterval(timer);
-    };
-  }, []);
-
   // Filter & Search logic
   const filteredMachines = useMemo(() => {
-    return machines.filter((item) => {
+    return twinData.filter((item) => {
       const { machine, twin } = item;
       const opState = twin?.operatingState?.toUpperCase() || 'NORMAL';
       const mStatus = machine.status?.toUpperCase() || 'ACTIVE';
@@ -83,32 +37,21 @@ export default function MachinesPage() {
         if (!matchId && !matchName && !matchSerial && !matchType) return false;
       }
 
-      // 2. Filter Pills
+      // 2. Active Tab Filter
       if (activeFilter === 'HEALTHY') return opState === 'NORMAL' && mStatus !== 'MAINTENANCE';
-      if (activeFilter === 'WARNING') return opState === 'WATCH' || opState === 'WARNING';
-      if (activeFilter === 'CRITICAL') return opState === 'CRITICAL';
+      if (activeFilter === 'WARNING') return (opState === 'WARNING' || opState === 'WATCH') && mStatus !== 'MAINTENANCE';
+      if (activeFilter === 'CRITICAL') return opState === 'CRITICAL' && mStatus !== 'MAINTENANCE';
       if (activeFilter === 'MAINTENANCE') return mStatus === 'MAINTENANCE';
       if (activeFilter === 'OFFLINE') return mStatus === 'INACTIVE' || mStatus === 'DECOMMISSIONED';
 
       return true;
     });
-  }, [machines, searchQuery, activeFilter]);
+  }, [twinData, searchQuery, activeFilter]);
 
-  // Sensor helper
-  const getSensorVal = (twin: DigitalTwinStateResponse | null, kw: string[], fallback: string) => {
-    if (!twin?.latestSensors) return fallback;
-    const s = twin.latestSensors.find((x) =>
-      kw.some(
-        (k) =>
-          x.sensorType?.toLowerCase().includes(k) ||
-          x.sensorLabel?.toLowerCase().includes(k)
-      )
-    );
-    return s ? `${s.value.toFixed(1)} ${s.unit}` : fallback;
-  };
-
-  const getHealthBadge = (twin: DigitalTwinStateResponse | null) => {
-    const score = twin?.healthScore ?? 100;
+  const renderHealthScore = (score: number | null | undefined) => {
+    if (score === null || score === undefined) {
+      return <span style={{ color: 'var(--text-muted)' }}>—</span>;
+    }
     const color =
       score >= 80
         ? 'var(--color-healthy)'
@@ -118,7 +61,7 @@ export default function MachinesPage() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{ width: 45, height: 6, background: 'var(--bg-inset)', borderRadius: 3, overflow: 'hidden' }}>
-          <div style={{ width: `${score}%`, height: '100%', background: color }} />
+          <div style={{ width: `${Math.min(100, score)}%`, height: '100%', background: color }} />
         </div>
         <span style={{ fontSize: '0.78rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color }}>
           {score.toFixed(0)}%
@@ -126,6 +69,8 @@ export default function MachinesPage() {
       </div>
     );
   };
+
+  const isZero = metrics.totalMachines === 0;
 
   return (
     <div className="machines-page" id="page-machine-fleet">
@@ -149,13 +94,7 @@ export default function MachinesPage() {
               {currentUser.name} ({currentUser.role})
             </span>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginLeft: 8 }}>
-              — {currentUser.focusArea === 'OVERVIEW'
-                ? 'Full system visibility, machine provisioning & status oversight'
-                : currentUser.focusArea === 'MAINTENANCE'
-                ? 'Prioritizing work orders, vibration anomalies & bearing wear'
-                : currentUser.focusArea === 'RELIABILITY'
-                ? 'Analyzing machine health distribution & RUL degradation curves'
-                : 'Live plant monitoring, threshold warnings & operating conditions'}
+              — Operational Focus: <strong>{currentUser.focusArea}</strong>
             </span>
           </div>
         </div>
@@ -179,11 +118,11 @@ export default function MachinesPage() {
         <div>
           <h1 className="page-header__title">MACHINE FLEET</h1>
           <div className="page-header__subtitle">
-            {machines.length} Industrial assets registered in Plant Bay 3
+            <strong>{metrics.totalMachines}</strong> industrial assets registered across plant bays
           </div>
         </div>
 
-        {/* Search Bar */}
+        {/* Search Bar & Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="topbar__search" style={{ minWidth: 260 }}>
             <span className="topbar__search-icon">🔍</span>
@@ -197,6 +136,13 @@ export default function MachinesPage() {
             />
           </div>
           <button
+            className="btn btn--secondary"
+            onClick={refreshFleet}
+            title="Refresh fleet from backend"
+          >
+            ↻ Refresh
+          </button>
+          <button
             className="btn btn--primary"
             onClick={() => navigate('/machines/1')}
             id="btn-quick-open-twin"
@@ -206,16 +152,45 @@ export default function MachinesPage() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
+      {/* ZERO MACHINE FALLBACK */}
+      {isZero && !loading && (
+        <div
+          style={{
+            background: 'rgba(239, 68, 68, 0.06)',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            borderRadius: 'var(--radius-md)',
+            padding: '32px 24px',
+            textAlign: 'center',
+            marginBottom: '20px',
+          }}
+        >
+          <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>⚙</div>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
+            NO MACHINES REGISTERED
+          </h2>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', maxWidth: 440, margin: '0 auto 16px' }}>
+            No machine data is currently available. Seed the demonstration fleet to view interactive digital twin models and telemetry.
+          </p>
+          <button
+            className="btn btn--primary"
+            onClick={loadDemoFleet}
+            style={{ padding: '8px 18px', fontSize: '0.82rem' }}
+          >
+            + Load Demonstration Fleet
+          </button>
+        </div>
+      )}
+
+      {/* Filter Tabs — STRICTLY SYNCHRONIZED COUNTS */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         {(
           [
-            { id: 'ALL', label: 'All Machines', count: machines.length },
-            { id: 'HEALTHY', label: 'Healthy', count: machines.filter((m) => m.twin?.operatingState === 'NORMAL').length },
-            { id: 'WARNING', label: 'Warning', count: machines.filter((m) => m.twin?.operatingState === 'WATCH' || m.twin?.operatingState === 'WARNING').length },
-            { id: 'CRITICAL', label: 'Critical', count: machines.filter((m) => m.twin?.operatingState === 'CRITICAL').length },
-            { id: 'MAINTENANCE', label: 'Maintenance', count: machines.filter((m) => m.machine.status === 'MAINTENANCE').length },
-            { id: 'OFFLINE', label: 'Offline', count: machines.filter((m) => m.machine.status === 'INACTIVE').length },
+            { id: 'ALL', label: 'All Machines', count: metrics.totalMachines },
+            { id: 'HEALTHY', label: 'Healthy', count: metrics.healthyCount },
+            { id: 'WARNING', label: 'Warning', count: metrics.warningCount },
+            { id: 'CRITICAL', label: 'Critical', count: metrics.criticalCount },
+            { id: 'MAINTENANCE', label: 'Maintenance', count: metrics.maintenanceCount },
+            { id: 'OFFLINE', label: 'Offline', count: metrics.offlineCount },
           ] as Array<{ id: FilterState; label: string; count: number }>
         ).map((tab) => (
           <button
@@ -240,52 +215,55 @@ export default function MachinesPage() {
                 <th>Machine Type</th>
                 <th>Status</th>
                 <th>Health</th>
-                <th>Temperature</th>
-                <th>Vibration</th>
-                <th>RPM</th>
-                <th>Current</th>
-                <th>Risk</th>
-                <th>Last Maintenance</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th>DE Vibration</th>
+                <th>Winding Temp</th>
+                <th>Active Fault</th>
+                <th>Digital Twin</th>
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {filteredMachines.length === 0 ? (
                 <tr>
-                  <td colSpan={12} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                    Loading machine fleet telemetry...
-                  </td>
-                </tr>
-              ) : filteredMachines.length === 0 ? (
-                <tr>
-                  <td colSpan={12} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    No machines match the selected filter or search criteria.
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '36px 12px', color: 'var(--text-muted)' }}>
+                    {searchQuery ? `No assets match search term "${searchQuery}"` : 'No machines registered'}
                   </td>
                 </tr>
               ) : (
                 filteredMachines.map(({ machine, twin }) => {
-                  const state = twin?.operatingState || 'NORMAL';
+                  const state = twin?.operatingState?.toUpperCase() || 'NORMAL';
                   const isMaint = machine.status === 'MAINTENANCE';
-                  const riskLevel =
-                    twin?.anomalyDetected || state === 'CRITICAL'
-                      ? 'HIGH'
-                      : state === 'WARNING' || state === 'WATCH'
-                      ? 'MEDIUM'
-                      : 'LOW';
+                  const isOffline = machine.status === 'INACTIVE' || machine.status === 'DECOMMISSIONED';
+
+                  let vibText = '—';
+                  let tempText = '—';
+                  if (twin?.latestSensors) {
+                    twin.latestSensors.forEach((s) => {
+                      const label = (s.sensorLabel || s.sensorType || '').toLowerCase();
+                      if (label.includes('vib')) vibText = `${s.value.toFixed(2)} mm/s`;
+                      if (label.includes('temp')) tempText = `${s.value.toFixed(1)} °C`;
+                    });
+                  }
+
+                  const fault =
+                    twin?.currentFaultType && twin.currentFaultType !== 'NONE'
+                      ? twin.currentFaultType.replace(/_/g, ' ')
+                      : 'None (Healthy)';
 
                   return (
                     <tr
                       key={machine.id}
                       onClick={() => navigate(`/machines/${machine.id}`)}
                       style={{ cursor: 'pointer' }}
-                      id={`machine-row-${machine.id}`}
+                      title={`Open Digital Twin for ${machine.name}`}
                     >
-                      {/* ID */}
-                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-info)' }}>
-                        #{machine.id}
+                      {/* Machine ID */}
+                      <td>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-primary)' }}>
+                          #{machine.id}
+                        </span>
                       </td>
 
-                      {/* Name */}
+                      {/* Asset Name & Location */}
                       <td>
                         <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{machine.name}</div>
                         <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -307,6 +285,8 @@ export default function MachinesPage() {
                           style={{
                             background: isMaint
                               ? 'var(--color-maintenance-bg)'
+                              : isOffline
+                              ? 'rgba(255, 255, 255, 0.05)'
                               : state === 'CRITICAL'
                               ? 'var(--color-critical-bg)'
                               : state === 'WARNING' || state === 'WATCH'
@@ -314,82 +294,69 @@ export default function MachinesPage() {
                               : 'var(--color-healthy-bg)',
                             color: isMaint
                               ? 'var(--color-maintenance)'
+                              : isOffline
+                              ? 'var(--text-muted)'
                               : state === 'CRITICAL'
                               ? 'var(--color-critical)'
                               : state === 'WARNING' || state === 'WATCH'
                               ? 'var(--color-warning)'
                               : 'var(--color-healthy)',
+                            fontSize: '0.68rem',
                           }}
                         >
-                          ● {isMaint ? 'MAINTENANCE' : state}
+                          ● {isMaint ? 'MAINTENANCE' : isOffline ? 'OFFLINE' : state}
                         </span>
                       </td>
 
                       {/* Health */}
-                      <td>{getHealthBadge(twin)}</td>
-
-                      {/* Temperature */}
-                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
-                        {getSensorVal(twin, ['temperature', 'temp'], '55.0 °C')}
-                      </td>
+                      <td>{renderHealthScore(twin?.healthScore)}</td>
 
                       {/* Vibration */}
-                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
-                        {getSensorVal(twin, ['vibration', 'vibr'], '1.80 mm/s')}
-                      </td>
-
-                      {/* RPM */}
-                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
-                        {getSensorVal(twin, ['rpm', 'speed'], '2915 RPM')}
-                      </td>
-
-                      {/* Current */}
-                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
-                        {getSensorVal(twin, ['current', 'amp'], '12.4 A')}
-                      </td>
-
-                      {/* Risk */}
                       <td>
-                        <span
-                          style={{
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            padding: '2px 6px',
-                            borderRadius: 3,
-                            background:
-                              riskLevel === 'HIGH'
-                                ? 'var(--color-critical-bg)'
-                                : riskLevel === 'MEDIUM'
-                                ? 'var(--color-warning-bg)'
-                                : 'var(--color-healthy-bg)',
-                            color:
-                              riskLevel === 'HIGH'
-                                ? 'var(--color-critical)'
-                                : riskLevel === 'MEDIUM'
-                                ? 'var(--color-warning)'
-                                : 'var(--color-healthy)',
-                          }}
-                        >
-                          {riskLevel}
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.76rem', color: 'var(--text-primary)' }}>
+                          {vibText}
                         </span>
                       </td>
 
-                      {/* Last Maintenance */}
-                      <td style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        2026-09-20 (Aryan M.)
+                      {/* Temp */}
+                      <td>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.76rem', color: 'var(--text-primary)' }}>
+                          {tempText}
+                        </span>
                       </td>
 
-                      {/* Actions */}
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                          <button
-                            className="table-action-btn"
-                            onClick={() => navigate(`/machines/${machine.id}`)}
-                            title="Open Interactive Digital Twin"
-                          >
-                            View Twin
-                          </button>
-                        </div>
+                      {/* Fault */}
+                      <td>
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            fontWeight: fault !== 'None (Healthy)' ? 700 : 500,
+                            color: fault !== 'None (Healthy)' ? 'var(--color-critical)' : 'var(--text-muted)',
+                          }}
+                        >
+                          {fault}
+                        </span>
+                      </td>
+
+                      {/* Action */}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className="table-action-btn"
+                          onClick={() => navigate(`/machines/${machine.id}`)}
+                          style={{
+                            padding: '4px 10px',
+                            background: 'rgba(77, 157, 224, 0.12)',
+                            border: '1px solid rgba(77, 157, 224, 0.35)',
+                            color: 'var(--color-primary)',
+                            borderRadius: 4,
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          View Twin →
+                        </button>
                       </td>
                     </tr>
                   );

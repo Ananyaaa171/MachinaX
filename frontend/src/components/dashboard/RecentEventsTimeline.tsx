@@ -63,7 +63,7 @@ function generateEvents(twinData: MachineTwinData[]): TimelineEvent[] {
 
     // Sensor threshold events
     if (twin.latestSensors) {
-      twin.latestSensors.forEach((sensor) => {
+      twin.latestSensors.forEach((sensor: any) => {
         if (sensor.status === 'CRITICAL') {
           events.push({
             id: `sensor-crit-${machine.id}-${sensor.sensorId}`,
