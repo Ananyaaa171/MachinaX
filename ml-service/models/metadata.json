@@ -1,0 +1,87 @@
+{
+  "modelName": "MACHINA-X Motor ML Engine",
+  "modelVersion": "1.0",
+  "trainedAt": "2026-09-28T20:13:32.425052+00:00",
+  "machineType": "THREE_PHASE_INDUCTION_MOTOR",
+  "dataType": "SIMULATED TRAINING DATA",
+  "dataProvenance": "Generated from electro-mechanical physical simulation profiles",
+  "features": [
+    "vibration",
+    "current",
+    "temperature",
+    "rpm",
+    "vibration_dev",
+    "current_dev",
+    "temperature_dev",
+    "rpm_dev"
+  ],
+  "classes": [
+    "NORMAL",
+    "BROKEN_ROTOR_BAR",
+    "STATOR_SHORT",
+    "BEARING_DEFECT",
+    "ECCENTRICITY"
+  ],
+  "classMapping": {
+    "NORMAL": 0,
+    "BROKEN_ROTOR_BAR": 1,
+    "STATOR_SHORT": 2,
+    "BEARING_DEFECT": 3,
+    "ECCENTRICITY": 4
+  },
+  "metrics": {
+    "xgboost": {
+      "accuracy": 0.9931,
+      "precision": 0.9931,
+      "recall": 0.9931,
+      "f1Score": 0.9931,
+      "confusionMatrix": [
+        [
+          477,
+          0,
+          0,
+          0,
+          3
+        ],
+        [
+          0,
+          238,
+          0,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          240,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          240,
+          0
+        ],
+        [
+          5,
+          0,
+          0,
+          0,
+          235
+        ]
+      ]
+    },
+    "isolationForest": {
+      "meanNormalScore": 0.336,
+      "meanFaultScore": 0.7227,
+      "accuracy": 0.9833
+    }
+  },
+  "limitations": [
+    "Trained on simulated motor data; does not represent real industrial measurements.",
+    "Predictions are probabilistic indicators, not definitive physical guarantees.",
+    "Real-world deployment requires training on labeled industrial accelerometer and current sensor records."
+  ]
+}

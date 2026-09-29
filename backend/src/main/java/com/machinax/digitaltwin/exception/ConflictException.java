@@ -1,0 +1,7 @@
+package com.machinax.digitaltwin.exception;
+
+public class ConflictException extends RuntimeException {
+    public ConflictException(String message) {
+        super(message);
+    }
+}
