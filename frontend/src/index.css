@@ -2043,3 +2043,255 @@ body {
     padding: var(--space-md);
   }
 }
+
+/* ================================================================
+   PHASE 10: INTERACTIVE MOTOR DIGITAL TWIN STYLES & ANIMATIONS
+   ================================================================ */
+
+.digital-twin-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.twin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.twin-header__left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.twin-header__badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-info);
+  background: rgba(77, 157, 224, 0.12);
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid rgba(77, 157, 224, 0.25);
+  display: inline-block;
+  margin-bottom: 3px;
+}
+
+.twin-header__name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.twin-header__sn {
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.twin-header__state-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-medium);
+  font-size: 0.72rem;
+}
+
+.twin-header__state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+.twin-header__fault-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-border);
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.twin-view-modes {
+  display: flex;
+  background: var(--bg-inset);
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  gap: 4px;
+}
+
+.twin-view-mode-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.twin-view-mode-btn:hover {
+  color: var(--text-primary);
+}
+
+.twin-view-mode-btn.active {
+  background: var(--bg-card);
+  color: var(--color-info);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.twin-canvas-wrapper {
+  width: 100%;
+  background: radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.4) 0%, rgba(11, 15, 26, 0.9) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.twin-svg {
+  width: 100%;
+  max-width: 820px;
+  height: auto;
+  max-height: 400px;
+  filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.6));
+}
+
+/* Animations */
+@keyframes twin-shaft-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes motor-vibrate-subtle {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  25% { transform: translate3d(-0.6px, 0.6px, 0); }
+  75% { transform: translate3d(0.6px, -0.6px, 0); }
+}
+
+@keyframes motor-vibrate-intense {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  20% { transform: translate3d(-1.8px, 1.4px, 0); }
+  40% { transform: translate3d(1.6px, -1.8px, 0); }
+  60% { transform: translate3d(-1.4px, -1.2px, 0); }
+  80% { transform: translate3d(1.8px, 1.6px, 0); }
+}
+
+.twin-motor--shake-subtle {
+  animation: motor-vibrate-subtle 0.12s linear infinite;
+}
+
+.twin-motor--shake-intense {
+  animation: motor-vibrate-intense 0.06s linear infinite;
+}
+
+.twin-pulse-dot {
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+/* Hotspots */
+.twin-sensor-hotspot {
+  transition: transform var(--transition-fast);
+}
+
+.twin-sensor-hotspot:hover {
+  transform: scale(1.15);
+}
+
+.twin-sensor-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin-top: var(--space-md);
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.twin-sensor-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.twin-sensor-badge:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-medium);
+  transform: translateY(-1px);
+}
+
+.twin-sensor-badge__icon {
+  font-size: 1.1rem;
+}
+
+.twin-sensor-badge__info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.twin-sensor-badge__label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.twin-sensor-badge__val {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.twin-sensor-badge__status {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+

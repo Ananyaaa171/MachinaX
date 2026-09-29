@@ -1,39 +1,35 @@
 /* ================================================================
    AppShell.tsx — Industrial sidebar + topbar layout wrapper.
-   Phase 9: Comprehensive Industrial Control Center Shell.
+   Phase 10: Multi-Page Navigation & Demo User Switching System.
    ================================================================ */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getMachines } from '../../api/client';
 import type { MachineResponse } from '../../types';
+import { useDemoUser } from '../../context/DemoUserContext';
 
 interface NavItem {
   id: string;
   label: string;
   icon: string;
-  targetId?: string;
+  path: string;
   badge?: number;
-  section: 'MAIN' | 'INTELLIGENCE' | 'AUDIT & OPS';
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: '▣', section: 'MAIN' },
-  { id: 'machines', label: 'Machines', icon: '⚙', targetId: 'section-machine-table', section: 'MAIN' },
-  { id: 'monitoring', label: 'Live Monitoring', icon: '◉', targetId: 'section-machine-table', section: 'MAIN' },
-  { id: 'anomalies', label: 'Anomaly Detection', icon: '⚠', targetId: 'section-active-alerts', badge: 3, section: 'INTELLIGENCE' },
-  { id: 'rul', label: 'Remaining Useful Life', icon: '⏳', targetId: 'section-predictive-maintenance', section: 'INTELLIGENCE' },
-  { id: 'maintenance', label: 'Maintenance Planner', icon: '🔧', targetId: 'section-predictive-maintenance', section: 'INTELLIGENCE' },
-  { id: 'logs', label: 'System Logs / History', icon: '◷', targetId: 'section-recent-events', section: 'AUDIT & OPS' },
-  { id: 'settings', label: 'Settings', icon: '⚙', section: 'AUDIT & OPS' },
+  { id: 'dashboard', label: 'Dashboard', icon: '▣', path: '/dashboard' },
+  { id: 'machines', label: 'Machines', icon: '⚙', path: '/machines' },
+  { id: 'twin', label: 'Live Monitoring', icon: '◉', path: '/machines/1' },
+  { id: 'alerts', label: 'Alerts', icon: '⚠', path: '/alerts', badge: 3 },
+  { id: 'maintenance', label: 'Maintenance', icon: '🔧', path: '/maintenance' },
+  { id: 'analytics', label: 'Analytics', icon: '📈', path: '/analytics' },
 ];
 
-const SECTIONS: Array<'MAIN' | 'INTELLIGENCE' | 'AUDIT & OPS'> = ['MAIN', 'INTELLIGENCE', 'AUDIT & OPS'];
-
 const PLANT_LINES = [
-  { id: 'plant-a-bay3', name: 'Plant A — Bay 3 (Motors)', active: true },
-  { id: 'plant-a-line1', name: 'Plant A — Assembly Line 1', active: false },
-  { id: 'plant-b-foundry', name: 'Plant B — Casting & Foundry', active: false },
+  { id: 'plant-a-bay3', name: 'Plant A — Bay 3 (Motors)' },
+  { id: 'plant-a-line1', name: 'Plant A — Assembly Line 1' },
+  { id: 'plant-b-foundry', name: 'Plant B — Casting & Foundry' },
 ];
 
 interface SimulationStatus {
@@ -50,8 +46,8 @@ interface Props {
 export default function AppShell({ children }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentUser, switchUser, users } = useDemoUser();
 
-  const [activeNav, setActiveNav] = useState('dashboard');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [backendOnline, setBackendOnline] = useState(true);
   const [mlOnline, setMlOnline] = useState(true);
@@ -61,13 +57,11 @@ export default function AppShell({ children }: Props) {
   const [machines, setMachines] = useState<MachineResponse[]>([]);
   const [selectedPlant, setSelectedPlant] = useState('plant-a-bay3');
   const [showSimModal, setShowSimModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
   const [simActionLoading, setSimActionLoading] = useState(false);
   const [refreshCountdown, setRefreshCountdown] = useState(8);
 
   const countdownTimerRef = useRef<number | null>(null);
-
-  // Uptime mock counter: 14 days, 6 hours, 42 mins
   const uptimeString = '99.98% • 14d 06h';
 
   // Live clock
@@ -76,7 +70,7 @@ export default function AppShell({ children }: Props) {
     return () => clearInterval(timer);
   }, []);
 
-  // Countdown timer for next refresh
+  // Countdown timer
   useEffect(() => {
     countdownTimerRef.current = window.setInterval(() => {
       setRefreshCountdown((prev) => (prev <= 1 ? 8 : prev - 1));
@@ -86,7 +80,7 @@ export default function AppShell({ children }: Props) {
     };
   }, []);
 
-  // Load machines for quick selector
+  // Load machines for selector
   useEffect(() => {
     let mounted = true;
     getMachines()
@@ -99,9 +93,8 @@ export default function AppShell({ children }: Props) {
     };
   }, []);
 
-  // Check backend, simulator and ML service health
+  // Check health
   const checkHealth = useCallback(async () => {
-    // 1. Backend
     try {
       const resp = await fetch('/api/v1/machines?size=1');
       setBackendOnline(resp.ok);
@@ -109,7 +102,6 @@ export default function AppShell({ children }: Props) {
       setBackendOnline(false);
     }
 
-    // 2. Simulator
     try {
       const simResp = await fetch('/sim-api/api/v1/simulator/status').catch(() =>
         fetch('http://localhost:8001/api/v1/simulator/status')
@@ -130,7 +122,6 @@ export default function AppShell({ children }: Props) {
       setSimOnline(false);
     }
 
-    // 3. ML Service
     try {
       const mlResp = await fetch('/ml-api/health').catch(() =>
         fetch('http://localhost:8000/health')
@@ -147,32 +138,7 @@ export default function AppShell({ children }: Props) {
     return () => clearInterval(interval);
   }, [checkHealth]);
 
-  // Navigate & scroll helper
-  const handleNavClick = (item: NavItem) => {
-    setActiveNav(item.id);
-
-    if (item.id === 'settings') {
-      setShowSettingsModal(true);
-      return;
-    }
-
-    if (location.pathname !== '/dashboard') {
-      navigate('/dashboard');
-      if (item.targetId) {
-        setTimeout(() => {
-          const el = document.getElementById(item.targetId!);
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }, 300);
-      }
-    } else if (item.targetId) {
-      const el = document.getElementById(item.targetId);
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  // Switch simulation mode
+  // Set sim mode
   const handleSetSimMode = async (mode: string) => {
     setSimActionLoading(true);
     try {
@@ -185,22 +151,21 @@ export default function AppShell({ children }: Props) {
       }).catch(() => null);
 
       if (!res || !res.ok) {
-        res = await fetch(fallbackUrl, {
+        await fetch(fallbackUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mode }),
         });
       }
-
       await checkHealth();
     } catch (err) {
-      console.error('Failed to change simulation mode:', err);
+      console.error('Failed to change mode:', err);
     } finally {
       setSimActionLoading(false);
     }
   };
 
-  // Toggle simulation running/paused
+  // Toggle sim
   const handleToggleSimulation = async () => {
     if (!simStatus) return;
     setSimActionLoading(true);
@@ -211,15 +176,34 @@ export default function AppShell({ children }: Props) {
       );
       await checkHealth();
     } catch (err) {
-      console.error('Failed to toggle simulation:', err);
+      console.error('Failed to toggle:', err);
     } finally {
       setSimActionLoading(false);
     }
   };
 
-  const currentMachineId = location.pathname.startsWith('/dashboard/')
-    ? location.pathname.split('/')[2]
-    : '';
+  // Determine active route
+  const currentPath = location.pathname;
+  const isNavActive = (item: NavItem) => {
+    if (item.id === 'dashboard') return currentPath === '/dashboard';
+    if (item.id === 'machines') return currentPath === '/machines';
+    if (item.id === 'twin') return currentPath.startsWith('/machines/');
+    if (item.id === 'alerts') return currentPath === '/alerts';
+    if (item.id === 'maintenance') return currentPath === '/maintenance';
+    if (item.id === 'analytics') return currentPath === '/analytics';
+    return false;
+  };
+
+  // Dynamic Page Title
+  const getPageTitle = () => {
+    if (currentPath === '/dashboard') return 'CONTROL CENTER';
+    if (currentPath === '/machines') return 'MACHINE FLEET';
+    if (currentPath.startsWith('/machines/')) return 'DIGITAL TWIN INSPECTION';
+    if (currentPath === '/alerts') return 'FLEET ALERTS';
+    if (currentPath === '/maintenance') return 'MAINTENANCE PLANNER';
+    if (currentPath === '/analytics') return 'RELIABILITY ANALYTICS';
+    return 'CONTROL CENTER';
+  };
 
   return (
     <div className="app-shell">
@@ -227,7 +211,8 @@ export default function AppShell({ children }: Props) {
           LEFT SIDEBAR
           ================================================================ */}
       <aside className="sidebar" role="navigation" aria-label="Main navigation">
-        <div className="sidebar__brand">
+        {/* Brand */}
+        <div className="sidebar__brand" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
           <div className="sidebar__logo-wrap" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: '1.25rem' }}>⬢</span>
             <div>
@@ -237,11 +222,11 @@ export default function AppShell({ children }: Props) {
           </div>
         </div>
 
-        {/* Quick Machine Selector in Sidebar */}
+        {/* Quick Asset Selector in Sidebar */}
         <div
           className="sidebar__machine-selector"
           style={{
-            padding: '12px 16px',
+            padding: '10px 14px',
             borderBottom: '1px solid var(--border-sidebar)',
             background: 'rgba(255, 255, 255, 0.01)',
           }}
@@ -253,27 +238,27 @@ export default function AppShell({ children }: Props) {
               textTransform: 'uppercase',
               letterSpacing: '1px',
               color: 'var(--text-muted)',
-              marginBottom: 6,
+              marginBottom: 5,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
             }}
           >
-            <span>Active Machine</span>
+            <span>Target Machine</span>
             <span style={{ color: 'var(--color-healthy)', fontSize: '0.6rem' }}>● LIVE</span>
           </div>
           <select
             className="sidebar__select"
-            value={currentMachineId || ''}
+            value={currentPath.startsWith('/machines/') ? currentPath.split('/')[2] : ''}
             onChange={(e) => {
               const val = e.target.value;
-              if (val) navigate(`/dashboard/${val}`);
-              else navigate('/dashboard');
+              if (val) navigate(`/machines/${val}`);
+              else navigate('/machines');
             }}
             style={{
               width: '100%',
               padding: '6px 8px',
-              fontSize: '0.75rem',
+              fontSize: '0.74rem',
               fontWeight: 600,
               background: 'var(--bg-card)',
               color: 'var(--text-primary)',
@@ -294,38 +279,36 @@ export default function AppShell({ children }: Props) {
           </select>
         </div>
 
-        {/* Navigation Sections */}
+        {/* Navigation Section */}
         <nav className="sidebar__nav">
-          {SECTIONS.map((section) => (
-            <div key={section} className="sidebar__nav-section">
-              <div className="sidebar__nav-label">{section}</div>
-              {NAV_ITEMS.filter((item) => item.section === section).map((item) => (
+          <div className="sidebar__nav-section">
+            <div className="sidebar__nav-label">INDUSTRIAL OPERATIONS</div>
+            {NAV_ITEMS.map((item) => {
+              const active = isNavActive(item);
+              return (
                 <div
                   key={item.id}
-                  className={`sidebar__nav-item ${activeNav === item.id ? 'active' : ''}`}
-                  onClick={() => handleNavClick(item)}
+                  className={`sidebar__nav-item ${active ? 'active' : ''}`}
+                  onClick={() => navigate(item.path)}
                   role="button"
                   tabIndex={0}
                   aria-label={item.label}
-                  onKeyDown={(e) => e.key === 'Enter' && handleNavClick(item)}
-                  id={`nav-${item.id}`}
+                  id={`nav-item-${item.id}`}
                 >
                   <span className="sidebar__nav-icon">{item.icon}</span>
-                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {item.label}
-                  </span>
+                  <span style={{ flex: 1 }}>{item.label}</span>
                   {item.badge ? <span className="sidebar__nav-badge">{item.badge}</span> : null}
                 </div>
-              ))}
-            </div>
-          ))}
+              );
+            })}
+          </div>
         </nav>
 
         {/* System Telemetry Status Indicator */}
         <div
           className="sidebar__sys-status"
           style={{
-            padding: '10px 16px',
+            padding: '10px 14px',
             borderTop: '1px solid var(--border-sidebar)',
             fontSize: '0.68rem',
             background: 'rgba(0,0,0,0.15)',
@@ -338,20 +321,20 @@ export default function AppShell({ children }: Props) {
               textTransform: 'uppercase',
               letterSpacing: '1px',
               color: 'var(--text-muted)',
-              marginBottom: 6,
+              marginBottom: 5,
             }}
           >
             System Status
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Backend API</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Spring Boot</span>
               <span style={{ color: backendOnline ? 'var(--color-healthy)' : 'var(--color-critical)', fontWeight: 600 }}>
                 ● {backendOnline ? 'Online' : 'Offline'}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Telemetry Stream</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Telemetry Engine</span>
               <span style={{ color: simOnline ? 'var(--color-healthy)' : 'var(--color-warning)', fontWeight: 600 }}>
                 ● {simOnline ? (simStatus?.isRunning ? 'Active (2s)' : 'Paused') : 'Inactive'}
               </span>
@@ -365,14 +348,37 @@ export default function AppShell({ children }: Props) {
           </div>
         </div>
 
-        {/* Plant Operator Tag & Profile */}
-        <div className="sidebar__footer">
+        {/* Demo User Card at Bottom of Sidebar */}
+        <div
+          className="sidebar__footer"
+          onClick={() => setShowUserModal(true)}
+          style={{ cursor: 'pointer', transition: 'background var(--transition-fast)' }}
+          title="Click to switch Demonstration User"
+          id="sidebar-user-card"
+        >
           <div className="sidebar__footer-user">
-            <div className="sidebar__avatar">AS</div>
-            <div className="sidebar__footer-info">
-              <div className="sidebar__footer-name">Anjali Sharma</div>
-              <div className="sidebar__footer-role">Operator: Plant Bay 3</div>
+            <div className="sidebar__avatar" style={{ background: currentUser.color }}>
+              {currentUser.initials}
             </div>
+            <div className="sidebar__footer-info">
+              <div className="sidebar__footer-name">{currentUser.name}</div>
+              <div className="sidebar__footer-role">{currentUser.role}</div>
+            </div>
+          </div>
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: '0.58rem',
+              color: 'var(--color-info)',
+              fontWeight: 700,
+              letterSpacing: '0.8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span>DEMO USER</span>
+            <span>SWITCH ⇄</span>
           </div>
         </div>
       </aside>
@@ -385,8 +391,16 @@ export default function AppShell({ children }: Props) {
         <header className="topbar" id="app-topbar">
           <div className="topbar__left">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 800, letterSpacing: '0.6px', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                CONTROL CENTER
+              <span
+                style={{
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.6px',
+                  color: 'var(--text-primary)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {getPageTitle()}
               </span>
               <span
                 style={{
@@ -405,7 +419,7 @@ export default function AppShell({ children }: Props) {
               </span>
             </div>
 
-            {/* Plant / Line selector */}
+            {/* Plant selector */}
             <div className="topbar__plant-wrap" style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <div className="topbar__divider" />
               <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>LINE:</span>
@@ -528,36 +542,55 @@ export default function AppShell({ children }: Props) {
 
             <div className="topbar__divider" />
 
-            {/* System-wide alert count badge */}
+            {/* Alerts notification icon */}
             <div
               className="topbar__icon-btn"
               title="Active Fleet Alarms"
               role="button"
               tabIndex={0}
               id="topbar-notifications"
-              onClick={() => handleNavClick(NAV_ITEMS[3])}
-              style={{ position: 'relative' }}
+              onClick={() => navigate('/alerts')}
+              style={{ position: 'relative', flexShrink: 0 }}
             >
               ⚠
               <span className="topbar__notif-badge">3</span>
             </div>
 
-            {/* Settings button */}
+            {/* DEMO USER Selector Dropdown / Pill */}
             <div
-              className="topbar__icon-btn"
-              title="Control Center Settings"
+              className="topbar__profile"
               role="button"
               tabIndex={0}
-              id="topbar-settings"
-              onClick={() => setShowSettingsModal(true)}
+              id="topbar-profile"
+              onClick={() => setShowUserModal(true)}
+              title="Click to Switch Demo User Role"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-medium)',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
             >
-              ⚙
-            </div>
-
-            {/* Operator Profile */}
-            <div className="topbar__profile" role="button" tabIndex={0} id="topbar-profile" title="Operator Profile">
-              <div className="topbar__profile-avatar">AS</div>
-              <span className="topbar__profile-name">Anjali (Bay 3)</span>
+              <div
+                className="topbar__profile-avatar"
+                style={{ background: currentUser.color, width: 24, height: 24, fontSize: '0.65rem', fontWeight: 700 }}
+              >
+                {currentUser.initials}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', lineHeight: 1.1 }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {currentUser.name}
+                </span>
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>
+                  {currentUser.role}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.65rem', color: 'var(--color-info)' }}>▾</span>
             </div>
           </div>
         </header>
@@ -567,6 +600,164 @@ export default function AppShell({ children }: Props) {
           {children}
         </main>
       </div>
+
+      {/* ================================================================
+          DEMO USER SWITCHER MODAL
+          ================================================================ */}
+      {showUserModal && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+          }}
+          onClick={() => setShowUserModal(false)}
+        >
+          <div
+            className="modal-card"
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-medium)',
+              borderRadius: 'var(--radius-lg)',
+              width: '560px',
+              maxWidth: '92vw',
+              boxShadow: 'var(--shadow-elevated)',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid var(--border-subtle)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: 'rgba(255, 255, 255, 0.02)',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  👤 Switch Demonstration User
+                </div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                  DEMONSTRATION MODE — Experience the control center from different operational perspectives
+                </div>
+              </div>
+              <button
+                className="btn btn--secondary"
+                style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+                onClick={() => setShowUserModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {users.map((u) => {
+                const isCurrent = u.id === currentUser.id;
+                return (
+                  <div
+                    key={u.id}
+                    onClick={() => {
+                      switchUser(u.id);
+                      setShowUserModal(false);
+                    }}
+                    style={{
+                      background: isCurrent ? 'rgba(77, 157, 224, 0.12)' : 'var(--bg-inset)',
+                      border: `1px solid ${isCurrent ? 'var(--color-info)' : 'var(--border-subtle)'}`,
+                      borderRadius: 'var(--radius-md)',
+                      padding: '12px 14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 12,
+                      transition: 'all var(--transition-fast)',
+                    }}
+                    id={`switch-user-${u.id.toLowerCase()}`}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        background: u.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontWeight: 800,
+                        fontSize: '0.82rem',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {u.initials}
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                            {u.name}
+                          </span>
+                          <span style={{ fontSize: '0.67rem', color: 'var(--text-muted)', marginLeft: 8 }}>
+                            {u.id}
+                          </span>
+                        </div>
+                        {isCurrent && (
+                          <span
+                            style={{
+                              fontSize: '0.62rem',
+                              fontWeight: 800,
+                              background: 'var(--color-info)',
+                              color: '#fff',
+                              padding: '1px 6px',
+                              borderRadius: 3,
+                            }}
+                          >
+                            CURRENT
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ fontSize: '0.72rem', color: 'var(--color-info)', fontWeight: 600, marginTop: 1 }}>
+                        {u.role}
+                      </div>
+
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                        {u.tagline}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                        {u.responsibilities.map((r, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              fontSize: '0.6rem',
+                              background: 'rgba(255,255,255,0.05)',
+                              padding: '1px 5px',
+                              borderRadius: 2,
+                              color: 'var(--text-muted)',
+                            }}
+                          >
+                            • {r}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================================================================
           SIMULATION CONTROL MODAL
@@ -582,7 +773,7 @@ export default function AppShell({ children }: Props) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1000,
+            zIndex: 1100,
           }}
           onClick={() => setShowSimModal(false)}
         >
@@ -627,7 +818,6 @@ export default function AppShell({ children }: Props) {
             </div>
 
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Simulator Engine Status */}
               <div
                 style={{
                   background: 'var(--bg-inset)',
@@ -660,7 +850,6 @@ export default function AppShell({ children }: Props) {
                 </button>
               </div>
 
-              {/* Fault Injection Modes */}
               <div>
                 <div
                   style={{
@@ -708,144 +897,6 @@ export default function AppShell({ children }: Props) {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              <div
-                style={{
-                  fontSize: '0.68rem',
-                  color: 'var(--text-muted)',
-                  borderTop: '1px solid var(--border-subtle)',
-                  paddingTop: 10,
-                }}
-              >
-                Note: Changing modes smoothly transitions the simulated induction motor physics. Telemetry batches are streamed every 2.0 seconds to Spring Boot.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================================================================
-          SETTINGS MODAL
-          ================================================================ */}
-      {showSettingsModal && (
-        <div
-          className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setShowSettingsModal(false)}
-        >
-          <div
-            className="modal-card"
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-medium)',
-              borderRadius: 'var(--radius-lg)',
-              width: '480px',
-              maxWidth: '92vw',
-              boxShadow: 'var(--shadow-elevated)',
-              overflow: 'hidden',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                padding: '16px 20px',
-                borderBottom: '1px solid var(--border-subtle)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: 'rgba(255, 255, 255, 0.02)',
-              }}
-            >
-              <div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  ⚙ Control Center Settings
-                </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                  Industrial telemetry thresholds & monitoring configurations
-                </div>
-              </div>
-              <button
-                className="btn btn--secondary"
-                style={{ padding: '2px 8px', fontSize: '0.8rem' }}
-                onClick={() => setShowSettingsModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  Telemetry Polling Interval
-                </label>
-                <select
-                  className="sidebar__select"
-                  defaultValue="8000"
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    marginTop: 4,
-                    background: 'var(--bg-inset)',
-                    color: 'var(--text-primary)',
-                    border: '1px solid var(--border-medium)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  <option value="4000">Fast (4 seconds)</option>
-                  <option value="8000">Standard Industrial (8 seconds)</option>
-                  <option value="15000">Conservative (15 seconds)</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  Health Alert Threshold
-                </label>
-                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                  <input
-                    type="text"
-                    defaultValue="70% (Warning) / 40% (Critical)"
-                    readOnly
-                    style={{
-                      flex: 1,
-                      padding: '8px 10px',
-                      background: 'var(--bg-inset)',
-                      color: 'var(--text-primary)',
-                      border: '1px solid var(--border-medium)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.75rem',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  ISO 10816 Vibration Alert Standard
-                </label>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                  Class II Medium Machines (15-75 kW Rigid Base): Warning &gt; 2.8 mm/s, Critical &gt; 4.5 mm/s.
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-                <button
-                  className="btn btn--primary"
-                  onClick={() => setShowSettingsModal(false)}
-                  style={{ fontSize: '0.75rem', padding: '6px 16px' }}
-                >
-                  Save & Close
-                </button>
               </div>
             </div>
           </div>
