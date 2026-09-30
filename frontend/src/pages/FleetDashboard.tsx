@@ -1,302 +1,121 @@
 /* ================================================================
-   FleetDashboard.tsx — Industrial Fleet Overview Dashboard
-   Phase 10.1: Real machine data single source of truth, role-specific
-   KPI emphasis, zero-machine empty state fallback, direct twin links,
-   and integrated Generate Report suite.
+   FleetDashboard.tsx — Role-Based Industrial Control Center
+   Phase 10.5: Genuinely role-oriented frontend experience.
+   One shared fleet backend, four distinct role-tailored dashboards:
+   - USR-001 Ananya Sharma: System Overview & Fleet Health
+   - USR-002 Aryan Mishra: Maintenance Control Center & Work Orders
+   - USR-003 Aditya Gupta: Reliability & Predictive Analytics
+   - USR-004 Aditya Maurya: Live Floor Operations & Telemetry Alarms
    ================================================================ */
 
-import React, { useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useFleet, type MachineTwinData } from '../context/FleetContext';
 export type { MachineTwinData };
 import { useDemoUser } from '../context/DemoUserContext';
-import FleetSummaryCards from '../components/dashboard/FleetSummaryCards';
-import FleetHealthSection from '../components/dashboard/FleetHealthSection';
-import MachineStatusTable from '../components/dashboard/MachineStatusTable';
-import ActiveAlertsPanel from '../components/dashboard/ActiveAlertsPanel';
-import PredictiveMaintenanceSection from '../components/dashboard/PredictiveMaintenanceSection';
-import RecentEventsTimeline from '../components/dashboard/RecentEventsTimeline';
+import { ROLE_CONFIGS } from '../config/roleConfig';
+import AdminDashboardView from '../components/dashboard/AdminDashboardView';
+import MaintenanceDashboardView from '../components/dashboard/MaintenanceDashboardView';
+import ReliabilityDashboardView from '../components/dashboard/ReliabilityDashboardView';
+import OperatorDashboardView from '../components/dashboard/OperatorDashboardView';
 import GenerateReportModal from '../components/report/GenerateReportModal';
 import RecentReportsSection from '../components/report/RecentReportsSection';
-import LiveEquipmentTwin from '../components/twin/LiveEquipmentTwin';
 
 export default function FleetDashboard() {
-  const navigate = useNavigate();
-  const { machines, twinData, loading, metrics, lastUpdated, refreshFleet, loadDemoFleet } = useFleet();
+  const { machines, loading, metrics, loadDemoFleet, refreshFleet } = useFleet();
   const { currentUser } = useDemoUser();
 
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [selectedMachineForReport, setSelectedMachineForReport] = useState<number | 'ALL'>('ALL');
 
-  const handleViewMachine = useCallback(
-    (machineId: number) => {
-      navigate(`/machines/${machineId}`);
-    },
-    [navigate]
-  );
+  const config = ROLE_CONFIGS[currentUser.id] || ROLE_CONFIGS['USR-001'];
 
   const handleOpenReportModal = (machineId: number | 'ALL' = 'ALL') => {
     setSelectedMachineForReport(machineId);
     setReportModalOpen(true);
   };
 
+  // Requirement 18: Role-based loading states
   if (loading && machines.length === 0) {
     return (
       <div className="full-page-loading">
         <div className="loading-spinner" />
         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          Loading fleet telemetry…
+          {config.loadingMessage}
         </div>
       </div>
     );
   }
 
+  // Requirement 17: Role-based empty states
   const isZero = metrics.totalMachines === 0;
+  if (isZero) {
+    return (
+      <div
+        style={{
+          background: 'rgba(239, 68, 68, 0.06)',
+          border: '1px solid rgba(239, 68, 68, 0.25)',
+          borderRadius: 'var(--radius-md)',
+          padding: '36px 24px',
+          textAlign: 'center',
+          margin: '32px auto',
+          maxWidth: 640,
+        }}
+      >
+        <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>⚙</div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 8px 0' }}>
+          {config.emptyState.title}
+        </h2>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: 460, margin: '0 auto 20px' }}>
+          {config.emptyState.description}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+          <button
+            className="btn btn--primary"
+            onClick={loadDemoFleet}
+            id="btn-load-demo-fleet"
+            style={{ padding: '8px 18px', fontSize: '0.8rem' }}
+          >
+            + Load Demonstration Fleet
+          </button>
+          <button
+            className="btn btn--secondary"
+            onClick={refreshFleet}
+            style={{ padding: '8px 18px', fontSize: '0.8rem' }}
+          >
+            ↻ Refresh Backend
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  // Identify critical or monitored machine for Home page Live Twin Preview (Requirement 14)
-  const monitoredItem = useMemo(() => {
-    if (twinData.length === 0) return null;
-    const critical = twinData.find((t) => t.twin?.operatingState === 'CRITICAL');
-    if (critical) return critical;
-    const warning = twinData.find((t) => t.twin?.operatingState === 'WARNING' || t.twin?.operatingState === 'WATCH');
-    if (warning) return warning;
-    const lowest = [...twinData].sort((a, b) => (a.twin?.healthScore ?? 100) - (b.twin?.healthScore ?? 100))[0];
-    return lowest || twinData[0];
-  }, [twinData]);
+  // Render role-specific dashboard based on current demo user
+  const renderRoleDashboard = () => {
+    switch (currentUser.id) {
+      case 'USR-001':
+        return <AdminDashboardView onOpenReportModal={() => handleOpenReportModal('ALL')} />;
+      case 'USR-002':
+        return <MaintenanceDashboardView onOpenReportModal={() => handleOpenReportModal('ALL')} />;
+      case 'USR-003':
+        return <ReliabilityDashboardView onOpenReportModal={() => handleOpenReportModal('ALL')} />;
+      case 'USR-004':
+        return <OperatorDashboardView onOpenReportModal={() => handleOpenReportModal('ALL')} />;
+      default:
+        return <AdminDashboardView onOpenReportModal={() => handleOpenReportModal('ALL')} />;
+    }
+  };
 
   return (
     <>
-      {/* Role Context Ribbon */}
-      <div
-        style={{
-          background: 'rgba(77, 157, 224, 0.06)',
-          border: '1px solid rgba(77, 157, 224, 0.18)',
-          borderRadius: 'var(--radius-md)',
-          padding: '10px 16px',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '1.2rem' }}>👤</span>
-          <div>
-            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              {currentUser.name} • {currentUser.role}
-            </span>
-            <div style={{ fontSize: '0.69rem', color: 'var(--text-muted)' }}>
-              Operational Emphasis: <strong>{currentUser.focusArea}</strong>
-            </div>
-          </div>
-        </div>
+      {/* Dynamic Role Dashboard */}
+      {renderRoleDashboard()}
 
-        <span
-          className="demo-tag"
-          style={{
-            background: 'rgba(77, 157, 224, 0.12)',
-            color: 'var(--color-primary)',
-            borderColor: 'rgba(77, 157, 224, 0.3)',
-            fontSize: '0.65rem',
-            padding: '2px 8px',
-          }}
-        >
-          DEMONSTRATION MODE
-        </span>
+      {/* Reports History Audit Section */}
+      <div style={{ marginTop: 24 }}>
+        <RecentReportsSection />
       </div>
 
-      {/* Page Header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-header__title">Fleet Overview</h1>
-          <div className="page-header__subtitle">
-            <strong>{metrics.totalMachines}</strong> physical assets monitored
-            {lastUpdated && (
-              <span style={{ marginLeft: 12, fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>
-                · Telemetry Polling: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="page-header__actions">
-          <button
-            className="btn btn--secondary"
-            id="btn-refresh-fleet"
-            onClick={() => refreshFleet()}
-            title="Refresh fleet telemetry from backend"
-          >
-            ↻ Refresh
-          </button>
-          <button
-            className="btn btn--primary"
-            id="btn-generate-report"
-            onClick={() => handleOpenReportModal('ALL')}
-            style={{ fontWeight: 700, letterSpacing: '0.02em' }}
-          >
-            📊 Generate Report
-          </button>
-        </div>
-      </div>
-
-      {/* ZERO MACHINE FALLBACK (REQUIREMENT 5) */}
-      {isZero && (
-        <div
-          style={{
-            background: 'rgba(239, 68, 68, 0.06)',
-            border: '1px solid rgba(239, 68, 68, 0.25)',
-            borderRadius: 'var(--radius-md)',
-            padding: '28px 24px',
-            textAlign: 'center',
-            marginBottom: '24px',
-          }}
-        >
-          <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>⚙</div>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
-            NO MACHINES REGISTERED
-          </h2>
-          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', maxWidth: 460, margin: '0 auto 18px' }}>
-            No machine data is currently available in the backend repository. Fleet analytics and telemetry streams are paused.
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-            <button
-              className="btn btn--primary"
-              onClick={loadDemoFleet}
-              id="btn-load-demo-fleet"
-              style={{ padding: '8px 16px', fontSize: '0.8rem' }}
-            >
-              + Load Demonstration Fleet
-            </button>
-            <button
-              className="btn btn--secondary"
-              onClick={refreshFleet}
-              style={{ padding: '8px 16px', fontSize: '0.8rem' }}
-            >
-              ↻ Refresh Backend
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Section A: Role-Aware Fleet Summary KPI Strip */}
-      <FleetSummaryCards metrics={metrics} currentUser={currentUser} loading={loading} />
-
-      {/* Section A.2: Live Digital Twin Equipment Preview (Requirement 14) */}
-      {!isZero && monitoredItem && (
-        <section className="section" id="section-twin-preview" style={{ marginBottom: 20 }}>
-          <LiveEquipmentTwin
-            machineId={monitoredItem.machine.id}
-            machineName={monitoredItem.machine.name}
-            machineSerialNumber={monitoredItem.machine.serialNumber}
-            machineStatus={monitoredItem.machine.status}
-            twin={monitoredItem.twin}
-            variant="compact"
-            onViewFullTwin={() => navigate(`/machines/${monitoredItem.machine.id}`)}
-            pollingIntervalSeconds={2}
-          />
-        </section>
-      )}
-
-      {/* Section B: Fleet Health Overview */}
-      <section className="section" id="section-fleet-health">
-        <div className="section-header">
-          <div className="section-header__left">
-            <span className="section-header__icon">◈</span>
-            <span className="section-header__title">Fleet Health</span>
-            <span className="section-header__badge">
-              {metrics.averageHealth !== null ? `${metrics.averageHealth}% Avg` : 'N/A'}
-            </span>
-          </div>
-        </div>
-        <FleetHealthSection twinData={twinData} />
-      </section>
-
-      {/* Section C: Machine Status / Fleet Overview (Requirement 2 & 8) */}
-      <section className="section" id="section-machine-table">
-        <div className="section-header">
-          <div className="section-header__left">
-            <span className="section-header__icon">⊞</span>
-            <span className="section-header__title">Fleet Overview — Machine Status</span>
-            <span className="section-header__badge">{metrics.totalMachines} machines</span>
-          </div>
-          <span
-            className="section-header__action"
-            onClick={() => navigate('/machines')}
-            style={{ cursor: 'pointer', fontSize: '0.75rem', color: 'var(--color-primary)' }}
-          >
-            Manage Fleet Inventory →
-          </span>
-        </div>
-        <MachineStatusTable
-          twinData={twinData}
-          onViewMachine={handleViewMachine}
-          onLoadDemoFleet={loadDemoFleet}
-        />
-      </section>
-
-      {/* Section D + E: Active Alerts + Predictive Maintenance (2-col) */}
-      <div className="two-col-row" id="section-alerts-predictive">
-        <section id="section-active-alerts">
-          <div className="section-header">
-            <div className="section-header__left">
-              <span className="section-header__icon">⚠</span>
-              <span className="section-header__title">Active Alerts</span>
-              <span
-                className="section-header__badge"
-                style={{
-                  background: metrics.activeAlertsCount > 0 ? 'var(--color-critical-bg)' : 'rgba(255,255,255,0.06)',
-                  color: metrics.activeAlertsCount > 0 ? 'var(--color-critical)' : 'var(--text-muted)',
-                  borderColor: metrics.activeAlertsCount > 0 ? 'var(--color-critical-border)' : 'var(--border-color)',
-                }}
-              >
-                {metrics.activeAlertsCount}
-              </span>
-            </div>
-            <span
-              className="section-header__action"
-              onClick={() => navigate('/alerts')}
-              style={{ cursor: 'pointer' }}
-            >
-              View all
-            </span>
-          </div>
-          <ActiveAlertsPanel twinData={twinData} onViewMachine={handleViewMachine} />
-        </section>
-
-        <section id="section-predictive-maintenance">
-          <div className="section-header">
-            <div className="section-header__left">
-              <span className="section-header__icon">🔧</span>
-              <span className="section-header__title">Predictive Maintenance</span>
-              <span className="demo-tag">ML Prognostics</span>
-            </div>
-            <span
-              className="section-header__action"
-              onClick={() => navigate('/analytics')}
-              style={{ cursor: 'pointer' }}
-            >
-              Reliability Analytics →
-            </span>
-          </div>
-          <PredictiveMaintenanceSection twinData={twinData} onViewMachine={handleViewMachine} />
-        </section>
-      </div>
-
-      {/* Section F: Recent Events */}
-      <section className="section" id="section-recent-events">
-        <div className="section-header">
-          <div className="section-header__left">
-            <span className="section-header__icon">◷</span>
-            <span className="section-header__title">Recent Events</span>
-          </div>
-        </div>
-        <RecentEventsTimeline twinData={twinData} />
-      </section>
-
-      {/* Section G: Recent Reports History (Requirement 15) */}
-      <RecentReportsSection />
-
-      {/* Generate Report Modal Component */}
+      {/* Role-Specific Generate Report Modal */}
       <GenerateReportModal
         isOpen={reportModalOpen}
         onClose={() => setReportModalOpen(false)}

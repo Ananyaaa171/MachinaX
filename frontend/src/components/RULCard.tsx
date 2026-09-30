@@ -58,14 +58,14 @@ export default function RULCard({ rul, loading, error }: Props) {
   return (
     <div className="card card--elevated" id="rul-card">
       <div className="card__header">
-        <span className="card__title">⏳ Remaining Useful Life</span>
+        <span className="card__title">⏳ Estimated Remaining Life (RUL)</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {/* Estimated RUL */}
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            Estimated RUL
+            Estimated Remaining Life (RUL)
           </div>
           <div className="card__value">
             {rul.estimatedRulHours !== null

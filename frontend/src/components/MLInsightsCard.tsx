@@ -25,7 +25,7 @@ export default function MLInsightsCard({ prediction, loading, error }: Props) {
   return (
     <div className="card card--elevated" id="ml-insights-card">
       <div className="card__header">
-        <span className="card__title">🤖 AI / ML Insights</span>
+        <span className="card__title">🤖 Condition Analysis & Failure Risk</span>
         {prediction.modelVersion && (
           <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
             v{prediction.modelVersion}
@@ -37,14 +37,14 @@ export default function MLInsightsCard({ prediction, loading, error }: Props) {
         {/* Anomaly Detection */}
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            Anomaly Detection
+            Unusual Behaviour (Anomaly Detection)
           </div>
           <span className={`status-badge status-badge--${anomalyClass}`}>
             {prediction.anomalyDetected ? '✕ Anomaly Detected' : '✓ No Anomaly'}
           </span>
           {prediction.anomalyScore !== null && (
             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-              Anomaly Score: <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+              Unusual Behaviour Score: <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
                 {formatNumber(prediction.anomalyScore, 4)}
               </span>
             </div>

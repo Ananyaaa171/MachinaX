@@ -30,7 +30,7 @@ export default function SHAPExplanationCard({ explanation, loading, error }: Pro
   return (
     <div className="card card--elevated" id="shap-explanation-card">
       <div className="card__header">
-        <span className="card__title">🔍 AI Model Explanation</span>
+        <span className="card__title">🔍 Why is this machine flagged? (Key Diagnostic Factors)</span>
         {explanation.modelVersion && (
           <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
             v{explanation.modelVersion}

@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { useFleet } from '../../context/FleetContext';
 import { useDemoUser } from '../../context/DemoUserContext';
 import { reportService } from '../../services/reportService';
+import { getRoleConfig } from '../../config/roleConfig';
 import type { ReportConfig, ReportType, DateRangeOption, GeneratedReport } from '../../types/report';
 import ReportViewerModal from './ReportViewerModal';
 
@@ -23,9 +24,10 @@ type ModalState = 'CONFIG' | 'GENERATING' | 'READY' | 'ERROR';
 export default function GenerateReportModal({ isOpen, onClose, defaultMachineId = 'ALL' }: Props) {
   const { machines, twinData, metrics } = useFleet();
   const { currentUser } = useDemoUser();
+  const roleConfig = getRoleConfig(currentUser.id);
 
   const [modalState, setModalState] = useState<ModalState>('CONFIG');
-  const [reportType, setReportType] = useState<ReportType>('FLEET_HEALTH');
+  const [reportType, setReportType] = useState<ReportType>(() => roleConfig.allowedReports[0]?.reportType || 'FLEET_HEALTH');
   const [selectedMachine, setSelectedMachine] = useState<number | 'ALL'>(defaultMachineId);
   const [dateRange, setDateRange] = useState<DateRangeOption>('24h');
 
@@ -163,12 +165,13 @@ export default function GenerateReportModal({ isOpen, onClose, defaultMachineId 
                     value={reportType}
                     onChange={(e) => setReportType(e.target.value as ReportType)}
                     style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)' }}
+                    id="select-report-type"
                   >
-                    <option value="FLEET_HEALTH">Fleet Health & Reliability Report</option>
-                    <option value="MACHINE_HEALTH">Machine Health & Digital Twin Diagnostics</option>
-                    <option value="PREDICTIVE_MAINTENANCE">Predictive Maintenance & RUL Forecast</option>
-                    <option value="MAINTENANCE_ACTIVITY">Maintenance Activity & Work Orders</option>
-                    <option value="ALERT_FAULT">Critical Alerts & Fault Distribution</option>
+                    {roleConfig.allowedReports.map((r) => (
+                      <option key={r.id} value={r.reportType}>
+                        {r.icon} {r.name} — {r.description.slice(0, 48)}…
+                      </option>
+                    ))}
                   </select>
                 </div>
 

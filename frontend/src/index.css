@@ -70,7 +70,7 @@
   --color-accent-bg: rgba(77, 157, 224, 0.08);
 
   /* Sidebar */
-  --sidebar-width: 252px;
+  --sidebar-width: 216px;
   --sidebar-collapsed: 60px;
 
   /* Spacing */
@@ -2373,5 +2373,156 @@ body {
 .modal-backdrop::-webkit-scrollbar-thumb:hover {
   background: var(--color-info);
 }
+
+/* ================================================================
+   THREE-PHASE INDUCTION MOTOR DIGITAL TWIN SYSTEM (PHASE 10.3)
+   Technical vector styling, rotating components, vibration jitter,
+   three-phase electrical indicators, and responsive fleet grid.
+   ================================================================ */
+
+@keyframes motorFanSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes motorShaftSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes motorVibeMild {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-0.6px, 0.4px); }
+  50% { transform: translate(0.5px, -0.5px); }
+  75% { transform: translate(-0.4px, -0.3px); }
+}
+
+@keyframes motorVibeSevere {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-1.8px, 1.2px); }
+  40% { transform: translate(1.6px, -1.4px); }
+  60% { transform: translate(-1.4px, -1.0px); }
+  80% { transform: translate(1.5px, 1.2px); }
+}
+
+@keyframes motorPhaseFlow {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes motorThermalPulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.08); }
+}
+
+@keyframes motorBearingFaultPulse {
+  0%, 100% { stroke-width: 2.5; r: 18; opacity: 1; }
+  50% { stroke-width: 4.5; r: 21; opacity: 0.85; }
+}
+
+@keyframes motorElectricalArc {
+  0%, 100% { opacity: 0.2; }
+  15% { opacity: 0.95; }
+  25% { opacity: 0.3; }
+  40% { opacity: 0.85; }
+  55% { opacity: 0.1; }
+}
+
+.motor-vibe-mild {
+  animation: motorVibeMild 0.08s infinite ease-in-out;
+}
+
+.motor-vibe-severe {
+  animation: motorVibeSevere 0.05s infinite ease-in-out;
+}
+
+/* Reduced motion support (Requirement 19) */
+@media (prefers-reduced-motion: reduce) {
+  .motor-vibe-mild,
+  .motor-vibe-severe,
+  .motor-fan-animated,
+  .motor-shaft-animated {
+    animation: none !important;
+  }
+}
+
+/* Fleet Digital Twin Grid (Requirement 6) */
+.fleet-twin-grid {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.fleet-twin-grid--single {
+  grid-template-columns: 1fr;
+  max-width: 800px;
+}
+
+.fleet-twin-grid--few {
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+}
+
+.fleet-twin-grid--multi {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+}
+
+/* Digital Twin Card Wrapper */
+.twin-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  transition: all var(--transition-fast);
+}
+
+.twin-card:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-elevated);
+}
+
+.twin-card--critical {
+  border-color: rgba(239, 68, 68, 0.45);
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.12);
+}
+
+.twin-card--warning {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.twin-card--maintenance {
+  border-color: rgba(139, 92, 246, 0.35);
+}
+
+/* Filter pills */
+.twin-filter-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.twin-filter-tab:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-accent);
+}
+
+.twin-filter-tab.active {
+  background: var(--bg-inset);
+  color: var(--color-info);
+  border-color: var(--color-info);
+}
+
 
 

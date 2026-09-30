@@ -32,6 +32,8 @@ const PLANT_LINES = [
   { id: 'plant-b-foundry', name: 'Plant B — Casting & Foundry' },
 ];
 
+import { getRoleConfig, type NavItemConfig } from '../../config/roleConfig';
+
 interface SimulationStatus {
   currentMode: string;
   isRunning: boolean;
@@ -46,7 +48,8 @@ interface Props {
 export default function AppShell({ children }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, switchUser, users } = useDemoUser();
+  const { currentUser, switchUser, logout, users } = useDemoUser();
+  const roleConfig = getRoleConfig(currentUser.id);
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [backendOnline, setBackendOnline] = useState(true);
@@ -184,25 +187,27 @@ export default function AppShell({ children }: Props) {
 
   // Determine active route
   const currentPath = location.pathname;
-  const isNavActive = (item: NavItem) => {
-    if (item.id === 'dashboard') return currentPath === '/dashboard';
-    if (item.id === 'machines') return currentPath === '/machines';
-    if (item.id === 'twin') return currentPath.startsWith('/machines/');
-    if (item.id === 'alerts') return currentPath === '/alerts';
-    if (item.id === 'maintenance') return currentPath === '/maintenance';
-    if (item.id === 'analytics') return currentPath === '/analytics';
-    return false;
+  const isNavActive = (item: NavItemConfig) => {
+    if (item.path === '/dashboard') return currentPath === '/dashboard';
+    if (item.path === '/machines') return currentPath === '/machines';
+    if (item.path.startsWith('/machines/')) return currentPath.startsWith('/machines/') && currentPath !== '/machines';
+    if (item.path === '/alerts') return currentPath.startsWith('/alerts');
+    if (item.path === '/maintenance') return currentPath.startsWith('/maintenance');
+    if (item.path === '/analytics') return currentPath.startsWith('/analytics');
+    if (item.path === '/profile') return currentPath === '/profile';
+    return currentPath === item.path;
   };
 
-  // Dynamic Page Title
+  // Dynamic Page Title tailored to Role
   const getPageTitle = () => {
-    if (currentPath === '/dashboard') return 'CONTROL CENTER';
-    if (currentPath === '/machines') return 'MACHINE FLEET';
+    if (currentPath === '/dashboard') return roleConfig.homeTitle;
+    if (currentPath === '/machines') return currentUser.id === 'USR-004' ? 'EQUIPMENT INVENTORY' : 'MACHINE FLEET';
     if (currentPath.startsWith('/machines/')) return 'DIGITAL TWIN INSPECTION';
-    if (currentPath === '/alerts') return 'FLEET ALERTS';
-    if (currentPath === '/maintenance') return 'MAINTENANCE PLANNER';
-    if (currentPath === '/analytics') return 'RELIABILITY ANALYTICS';
-    return 'CONTROL CENTER';
+    if (currentPath === '/alerts') return currentUser.id === 'USR-002' ? 'FAULT ALERTS' : currentUser.id === 'USR-004' ? 'FLOOR ALARMS' : 'FLEET ALERTS';
+    if (currentPath === '/maintenance') return currentUser.id === 'USR-002' ? 'MAINTENANCE CONTROL' : 'MAINTENANCE PLANNER';
+    if (currentPath === '/analytics') return 'RELIABILITY & PROGNOSTICS';
+    if (currentPath === '/profile') return `${currentUser.name.toUpperCase()} PROFILE`;
+    return roleConfig.homeTitle;
   };
 
   return (
@@ -282,8 +287,8 @@ export default function AppShell({ children }: Props) {
         {/* Navigation Section */}
         <nav className="sidebar__nav">
           <div className="sidebar__nav-section">
-            <div className="sidebar__nav-label">INDUSTRIAL OPERATIONS</div>
-            {NAV_ITEMS.map((item) => {
+            <div className="sidebar__nav-label">{currentUser.role.toUpperCase()}</div>
+            {roleConfig.navItems.map((item) => {
               const active = isNavActive(item);
               return (
                 <div
@@ -304,49 +309,7 @@ export default function AppShell({ children }: Props) {
           </div>
         </nav>
 
-        {/* System Telemetry Status Indicator */}
-        <div
-          className="sidebar__sys-status"
-          style={{
-            padding: '10px 14px',
-            borderTop: '1px solid var(--border-sidebar)',
-            fontSize: '0.68rem',
-            background: 'rgba(0,0,0,0.15)',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '0.6rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              color: 'var(--text-muted)',
-              marginBottom: 5,
-            }}
-          >
-            System Status
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Spring Boot</span>
-              <span style={{ color: backendOnline ? 'var(--color-healthy)' : 'var(--color-critical)', fontWeight: 600 }}>
-                ● {backendOnline ? 'Online' : 'Offline'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Telemetry Engine</span>
-              <span style={{ color: simOnline ? 'var(--color-healthy)' : 'var(--color-warning)', fontWeight: 600 }}>
-                ● {simOnline ? (simStatus?.isRunning ? 'Active (2s)' : 'Paused') : 'Inactive'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>ML Engine (XGB)</span>
-              <span style={{ color: mlOnline ? 'var(--color-healthy)' : 'var(--color-critical)', fontWeight: 600 }}>
-                ● {mlOnline ? 'Ready' : 'Offline'}
-              </span>
-            </div>
-          </div>
-        </div>
+
 
         {/* Demo User Card at Bottom of Sidebar */}
         <div
@@ -377,8 +340,8 @@ export default function AppShell({ children }: Props) {
               justifyContent: 'space-between',
             }}
           >
-            <span>DEMO USER</span>
-            <span>SWITCH ⇄</span>
+            <span style={{ color: 'var(--color-healthy)' }}>● ACTIVE ({currentUser.id})</span>
+            <span>SESSION ▾</span>
           </div>
         </div>
       </aside>
@@ -388,160 +351,22 @@ export default function AppShell({ children }: Props) {
           ================================================================ */}
       <div className="main-area">
         {/* ---- TOPBAR ---- */}
-        <header className="topbar" id="app-topbar">
-          <div className="topbar__left">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <span
-                style={{
-                  fontSize: '0.82rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.6px',
-                  color: 'var(--text-primary)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {getPageTitle()}
-              </span>
-              <span
-                style={{
-                  fontSize: '0.58rem',
-                  fontWeight: 700,
-                  padding: '1px 5px',
-                  borderRadius: 3,
-                  background: 'rgba(77, 157, 224, 0.12)',
-                  color: 'var(--color-info)',
-                  border: '1px solid rgba(77, 157, 224, 0.25)',
-                  letterSpacing: '0.8px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                BAY 3
-              </span>
-            </div>
-
-            {/* Plant selector */}
-            <div className="topbar__plant-wrap" style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <div className="topbar__divider" />
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>LINE:</span>
-              <select
-                className="topbar__plant-select"
-                value={selectedPlant}
-                onChange={(e) => setSelectedPlant(e.target.value)}
-                style={{
-                  background: 'var(--bg-card)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  padding: '4px 8px',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-                id="topbar-plant-select"
-                aria-label="Select Plant or Line"
-              >
-                {PLANT_LINES.map((pl) => (
-                  <option key={pl.id} value={pl.id}>
-                    {pl.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Uptime counter */}
-            <div
-              className="topbar__uptime-wrap"
+        <header className="topbar" id="app-topbar" style={{ padding: '0 20px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-medium)', background: 'var(--bg-topbar)' }}>
+          <div className="topbar__left" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h1
               style={{
-                fontSize: '0.7rem',
-                color: 'var(--text-secondary)',
-                fontFamily: 'var(--font-mono)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                letterSpacing: '0.02em',
+                margin: 0,
               }}
-              title="System Uptime: 99.98% (14 days, 6 hours)"
             >
-              <div className="topbar__divider" />
-              <span style={{ color: 'var(--text-muted)' }}>UPTIME:</span>
-              <span style={{ color: 'var(--color-healthy)', fontWeight: 600 }}>99.98%</span>
-            </div>
+              {getPageTitle()}
+            </h1>
           </div>
 
-          <div className="topbar__right">
-            {/* Simulation Control shortcut toggle */}
-            <button
-              className="btn btn--secondary"
-              onClick={() => setShowSimModal(true)}
-              style={{
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                padding: '4px 8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                borderColor: simStatus?.currentMode !== 'HEALTHY' ? 'var(--color-warning)' : 'var(--border-medium)',
-                color: simStatus?.currentMode !== 'HEALTHY' ? 'var(--color-warning)' : 'var(--text-primary)',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-              }}
-              id="topbar-sim-controls-btn"
-              title="Open Simulator Telemetry & Fault Injection Controls"
-            >
-              <span>⚡ SIM</span>
-              <span
-                style={{
-                  fontSize: '0.6rem',
-                  padding: '1px 5px',
-                  borderRadius: 3,
-                  background: simStatus?.currentMode === 'HEALTHY' ? 'var(--color-healthy-bg)' : 'var(--color-warning-bg)',
-                  color: simStatus?.currentMode === 'HEALTHY' ? 'var(--color-healthy)' : 'var(--color-warning)',
-                  fontWeight: 800,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {simStatus?.currentMode || 'ONLINE'}
-              </span>
-            </button>
-
-            {/* Quick auto-refresh countdown indicator */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                fontSize: '0.68rem',
-                color: 'var(--text-muted)',
-                fontFamily: 'var(--font-mono)',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-              }}
-              title="Auto-refresh countdown"
-            >
-              <span>↻</span>
-              <span>{refreshCountdown}s</span>
-            </div>
-
-            <div className="topbar__divider" />
-
-            {/* Live clock */}
-            <div className="topbar__live" style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
-              <div className="topbar__live-dot" />
-              <span className="topbar__live-label">LIVE</span>
-              <span style={{ marginLeft: 3, fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>
-                {currentTime.toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                })}
-              </span>
-            </div>
-
-            <div className="topbar__divider" />
-
+          <div className="topbar__right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {/* Alerts notification icon */}
             <div
               className="topbar__icon-btn"
@@ -550,20 +375,33 @@ export default function AppShell({ children }: Props) {
               tabIndex={0}
               id="topbar-notifications"
               onClick={() => navigate('/alerts')}
-              style={{ position: 'relative', flexShrink: 0 }}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '5px 10px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                color: 'var(--color-critical)',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
             >
-              ⚠
-              <span className="topbar__notif-badge">3</span>
+              <span>⚠</span>
+              <span>Alarms (3)</span>
             </div>
 
-            {/* DEMO USER Selector Dropdown / Pill */}
+            {/* Current User & Role Pill */}
             <div
               className="topbar__profile"
               role="button"
               tabIndex={0}
               id="topbar-profile"
               onClick={() => setShowUserModal(true)}
-              title="Click to Switch Demo User Role"
+              title="Click to Switch Demo User or View Profile"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -573,25 +411,49 @@ export default function AppShell({ children }: Props) {
                 background: 'var(--bg-card)',
                 border: '1px solid var(--border-medium)',
                 cursor: 'pointer',
-                flexShrink: 0,
               }}
             >
               <div
                 className="topbar__profile-avatar"
-                style={{ background: currentUser.color, width: 24, height: 24, fontSize: '0.65rem', fontWeight: 700 }}
+                style={{
+                  background: currentUser.color,
+                  width: 26,
+                  height: 26,
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                }}
               >
                 {currentUser.initials}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', lineHeight: 1.1 }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', lineHeight: 1.15 }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {currentUser.name}
                 </span>
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>
+                <span style={{ fontSize: '0.64rem', color: 'var(--text-secondary)' }}>
                   {currentUser.role}
                 </span>
               </div>
-              <span style={{ fontSize: '0.65rem', color: 'var(--color-info)' }}>▾</span>
+              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>▾</span>
             </div>
+
+            {/* Direct Logout / Switch button */}
+            <button
+              className="btn btn--secondary"
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+              style={{ fontSize: '0.72rem', padding: '5px 10px' }}
+              title="Logout from current user session"
+              id="topbar-logout-btn"
+            >
+              Logout
+            </button>
           </div>
         </header>
 
@@ -602,7 +464,7 @@ export default function AppShell({ children }: Props) {
       </div>
 
       {/* ================================================================
-          DEMO USER SWITCHER MODAL
+          USER PROFILE & SESSION MODAL (Phase 10.6)
           ================================================================ */}
       {showUserModal && (
         <div
@@ -612,19 +474,20 @@ export default function AppShell({ children }: Props) {
           <div
             className="modal-card"
             style={{
-              width: '560px',
+              width: '480px',
               maxWidth: '94vw',
               maxHeight: 'min(88vh, 680px)',
             }}
             onClick={(e) => e.stopPropagation()}
+            id="modal-user-session"
           >
             <div className="modal-header">
               <div>
                 <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  👤 Switch Demonstration User
+                  👤 Active Industrial Session
                 </div>
                 <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                  DEMONSTRATION MODE — Experience the control center from different operational perspectives
+                  Authenticated Operator Identity & Access Governance
                 </div>
               </div>
               <button
@@ -639,106 +502,161 @@ export default function AppShell({ children }: Props) {
             <div
               className="modal-body"
               style={{
-                padding: '16px 20px',
+                padding: '20px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 10,
+                gap: 16,
               }}
             >
-              {users.map((u) => {
-                const isCurrent = u.id === currentUser.id;
-                return (
-                  <div
-                    key={u.id}
-                    onClick={() => {
-                      switchUser(u.id);
-                      setShowUserModal(false);
-                    }}
-                    style={{
-                      background: isCurrent ? 'rgba(77, 157, 224, 0.12)' : 'var(--bg-inset)',
-                      border: `1px solid ${isCurrent ? 'var(--color-info)' : 'var(--border-subtle)'}`,
-                      borderRadius: 'var(--radius-md)',
-                      padding: '12px 14px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 12,
-                      transition: 'all var(--transition-fast)',
-                    }}
-                    id={`switch-user-${u.id.toLowerCase()}`}
-                  >
-                    <div
+              {/* User Profile Card */}
+              <div
+                style={{
+                  background: 'var(--bg-inset)',
+                  border: '1px solid var(--border-medium)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                }}
+              >
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: '50%',
+                    background: currentUser.color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontWeight: 800,
+                    fontSize: '1.2rem',
+                    flexShrink: 0,
+                    border: '2px solid rgba(255, 255, 255, 0.2)',
+                  }}
+                >
+                  {currentUser.initials}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>
+                      {currentUser.name}
+                    </span>
+                    <span
                       style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: '50%',
-                        background: u.color,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#fff',
-                        fontWeight: 800,
-                        fontSize: '0.82rem',
-                        flexShrink: 0,
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        padding: '2px 6px',
+                        borderRadius: 3,
+                        background: 'rgba(77, 157, 224, 0.15)',
+                        color: 'var(--color-info)',
+                        border: '1px solid rgba(77, 157, 224, 0.3)',
                       }}
                     >
-                      {u.initials}
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
-                        <div>
-                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
-                            {u.name}
-                          </span>
-                          <span style={{ fontSize: '0.67rem', color: 'var(--text-muted)', marginLeft: 8 }}>
-                            {u.id}
-                          </span>
-                        </div>
-                        {isCurrent && (
-                          <span
-                            style={{
-                              fontSize: '0.62rem',
-                              fontWeight: 800,
-                              background: 'var(--color-info)',
-                              color: '#fff',
-                              padding: '1px 6px',
-                              borderRadius: 3,
-                            }}
-                          >
-                            CURRENT
-                          </span>
-                        )}
-                      </div>
-
-                      <div style={{ fontSize: '0.72rem', color: 'var(--color-info)', fontWeight: 600, marginTop: 1 }}>
-                        {u.role}
-                      </div>
-
-                      <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: 4 }}>
-                        {u.tagline}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                        {u.responsibilities.map((r, i) => (
-                          <span
-                            key={i}
-                            style={{
-                              fontSize: '0.6rem',
-                              background: 'rgba(255,255,255,0.05)',
-                              padding: '1px 5px',
-                              borderRadius: 2,
-                              color: 'var(--text-muted)',
-                            }}
-                          >
-                            • {r}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                      {currentUser.id}
+                    </span>
                   </div>
-                );
-              })}
+
+                  <div style={{ fontSize: '0.78rem', color: 'var(--color-primary)', fontWeight: 600, marginTop: 2 }}>
+                    {currentUser.role}
+                  </div>
+
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                    {currentUser.tagline}
+                  </div>
+                </div>
+              </div>
+
+              {/* Session Meta */}
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '12px 14px',
+                  fontSize: '0.74rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Session Security:</span>
+                  <span style={{ color: 'var(--color-healthy)', fontWeight: 600 }}>● Authenticated Session</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Assigned Username:</span>
+                  <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{currentUser.username}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Role Dashboard:</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{roleConfig.homeTitle}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  className="btn btn--secondary"
+                  onClick={() => {
+                    setShowUserModal(false);
+                    navigate('/profile');
+                  }}
+                  id="btn-modal-view-profile"
+                  style={{ width: '100%', padding: '9px', fontSize: '0.8rem', fontWeight: 600 }}
+                >
+                  👤 View Profile & Interface Scope
+                </button>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <button
+                    className="btn btn--secondary"
+                    onClick={() => {
+                      setShowUserModal(false);
+                      switchUser();
+                      navigate('/login', { replace: true });
+                    }}
+                    id="btn-modal-switch-user"
+                    style={{ padding: '9px', fontSize: '0.8rem', fontWeight: 600 }}
+                  >
+                    ⇄ Switch User
+                  </button>
+
+                  <button
+                    className="btn btn--secondary"
+                    onClick={() => {
+                      setShowUserModal(false);
+                      switchUser();
+                      navigate('/login', { replace: true });
+                    }}
+                    id="btn-modal-logout"
+                    style={{
+                      padding: '9px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      color: 'var(--color-critical)',
+                      borderColor: 'rgba(239, 68, 68, 0.35)',
+                    }}
+                  >
+                    ⎋ Log Out
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '10px 20px',
+                borderTop: '1px solid var(--border-subtle)',
+                background: 'rgba(0, 0, 0, 0.2)',
+                fontSize: '0.67rem',
+                color: 'var(--text-muted)',
+                textAlign: 'center',
+              }}
+            >
+              Terminating session returns to /login. Credentials are required to switch users.
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 /* ================================================================
-   user.ts — Demo Users and Role Definitions for MACHINA-X
-   Phase 10: 4 Demonstration Users with Distinct Operational Contexts
+   user.ts — Demo Users, Authentication & Role Definitions for MACHINA-X
+   Phase 10.6: 4 Demonstration Users with Login Credentials & Roles
    ================================================================ */
 
 export type UserRole =
@@ -18,6 +18,8 @@ export interface DemoUser {
   initials: string;
   color: string;
   badge: string;
+  username: string;
+  password: string; // Demo credentials safe for frontend auth
   responsibilities: string[];
   focusArea: UserFocusArea;
   tagline: string;
@@ -31,6 +33,8 @@ export const DEMO_USERS: DemoUser[] = [
     initials: 'AS',
     color: '#3b82f6',
     badge: 'ADMIN',
+    username: 'ananya',
+    password: 'admin123',
     responsibilities: [
       'System overview',
       'Machine monitoring',
@@ -48,6 +52,8 @@ export const DEMO_USERS: DemoUser[] = [
     initials: 'AM',
     color: '#f59e0b',
     badge: 'MAINT_ENG',
+    username: 'aryan',
+    password: 'maintenance123',
     responsibilities: [
       'Machine health',
       'Fault investigation',
@@ -65,6 +71,8 @@ export const DEMO_USERS: DemoUser[] = [
     initials: 'AG',
     color: '#8b5cf6',
     badge: 'RELIABILITY',
+    username: 'aditya.reliability',
+    password: 'reliability123',
     responsibilities: [
       'Predictive analytics',
       'Failure trends',
@@ -82,6 +90,8 @@ export const DEMO_USERS: DemoUser[] = [
     initials: 'AM',
     color: '#10b981',
     badge: 'OPERATOR',
+    username: 'aditya.operator',
+    password: 'operator123',
     responsibilities: [
       'Live machine monitoring',
       'Machine status',
